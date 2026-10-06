@@ -44,7 +44,6 @@ def fixture_setup(tmp_path_factory: pytest.TempPathFactory) -> tuple[dict, Path,
     cfg = load_config(REPO / "configs" / "smoke" / "utae_ce.yaml", [f"output.runs_dir={tmp / 'runs'}", *TINY_UTAE])
     data = load_config(REPO / "configs" / "data" / "dated_amazon.yaml",
                        [f"root={root}", f"stats_path={tmp / 'stats.pt'}", "num_workers=0"])
-    data.pop("seed")  # src.train.data_config injects the top-level seed and refuses data.seed
     cfg.update(data=data, experiment_name="smoke_early")
     cfg["model"]["error_days_after"] = 0
     torch.manual_seed(0)
