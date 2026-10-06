@@ -1,0 +1,3 @@
+# Phase 1 track 1: upstream reference run (python -m src.reference_run) with the baseline_utae_focal.yaml recipe.
+base: baseline_utae_focal.yaml
+experiment_name: reference_baseline_utae_focal

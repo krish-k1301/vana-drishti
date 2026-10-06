@@ -1,0 +1,3 @@
+# SMOKE run of the upstream reference launcher (src.reference_run) with the same settings as utae_focal.yaml.
+base: utae_focal.yaml
+experiment_name: smoke_reference_utae_focal

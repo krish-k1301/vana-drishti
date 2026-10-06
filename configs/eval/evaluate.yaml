@@ -1,0 +1,8 @@
+# Evaluation settings for src.evaluate (Phases 1, 2, 6). Run-specific settings (model, data) come from the run config.
+batch_size: 4
+num_workers: 0
+pixel_size_m: 10            # Sentinel-1 GRD pixel (PRD 5); pixel area = 0.01 ha
+min_component_px: 1         # minimum mapping unit in pixels (PRD 9: stated in every results table)
+size_bins_ha: [0.5, 2.0]    # <0.5, 0.5-2, >2 ha (PRD 7 Phase 5)
+component_hit_fraction: 0.5 # a reference component counts as detected if >= this fraction of its pixels is predicted
+edge_width_px: 2            # edge = within 2 px of the polygon boundary (PRD 3 H2); same width for the outer ring

@@ -12,6 +12,7 @@ from src.metrics.latency import (  # noqa: E402
     first_detection_day,
     latency_summary,
     recall_at_offsets,
+    recall_from_detection_days,
 )
 
 CUT = np.array([0.0, 12.0, 24.0, 36.0, 48.0])
@@ -87,3 +88,11 @@ def test_recall_equals_detection_day_rule():
         out = recall_at_offsets(curves, ref, offsets=(0, 12), tau=0.6, persist_k=k)
         for off in (0, 12):
             assert out["recall"][off] == pytest.approx(np.mean(det <= ref + off))
+
+
+def test_recall_from_detection_days_matches_curves():
+    ref = np.array([12.0, 12.0, 12.0, np.nan])
+    det = detection_days(_curves(), tau=0.5)
+    fast = recall_from_detection_days(det, ref, offsets=(0, 12, 36))
+    slow = recall_at_offsets(_curves(), ref, offsets=(0, 12, 36), tau=0.5)
+    assert fast == slow

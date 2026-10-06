@@ -1,0 +1,14 @@
+# SMOKE run of our pipeline: baseline_utae.yaml recipe on synthetic data, 2 epochs on CPU.
+base: ../baseline_utae.yaml
+experiment_name: smoke_utae_ce
+smoke: true
+
+data:
+  root: data/synthetic_bradd
+  stats_path: data/synthetic_bradd/vanadrishti_close_train_stats.pt
+  num_workers: 2
+
+trainer:
+  max_epochs: 2
+  accelerator: cpu
+  enable_progress_bar: false

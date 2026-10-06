@@ -1,0 +1,20 @@
+# Phase 5 early-detection evaluation settings for src.early_eval (PRD 3, 7 Phase 5, 9).
+base: evaluate.yaml
+min_dates: 4                # cutoffs t_c = every image day with >= this many images in the interval window
+cutoff_batch_size: 8        # prefixes run through the model at once (memory only, no effect on results)
+event_curve: mean           # mean | max over event-mask pixels: the per-event curve used for event latency
+persist_k: 1                # consecutive cutoffs >= tau needed to call a detection (1 = first crossing)
+recall_offsets_days: [0, 12, 24, 48, 90]   # recall at DETER date + offset (PRD 7 Phase 5)
+false_alarms:
+  budget_per_km2_month: 0.5 # false-alarm budget used to choose tau on VALIDATION negatives
+  unit: components          # components | pixels
+  negative_sampling_types: [forest]        # meta.csv sampling_type values that are stable-forest negatives
+  threshold_candidates: null                # null = every unique validation score; or a list of taus
+deter_classes:              # DETER class -> stage name used in tables and plots (PRD 3)
+  DESMATAMENTO_CR: exposed_soil
+  DESMATAMENTO_VEG: vegetation_remaining
+  CICATRIZ_DE_QUEIMADA: burn_scar
+save_pixel_probs: false     # true writes per-sample [K,H,W] float16 probabilities to pixel_probs/*.npz
+plots:
+  days_bin_width: 15        # days-since-event bin width for the per-stage median curve
+  latency_hist_bins: 20

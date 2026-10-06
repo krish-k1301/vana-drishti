@@ -4,7 +4,6 @@ Connected components use 8-connectivity within one map (components never cross p
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Sequence
 
 import numpy as np

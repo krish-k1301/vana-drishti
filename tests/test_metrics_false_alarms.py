@@ -63,3 +63,10 @@ def test_select_threshold_with_candidates():
     tau = select_threshold_for_budget(scores, 1.0, 1.0, budget=10.0, unit="pixels", candidates=grid)
     assert count_false_alarms(scores >= tau, "pixels") <= 10
     assert count_false_alarms(scores >= tau - 0.01, "pixels") > 10
+
+
+def test_select_threshold_float32_scores_respect_budget():
+    """tau above the max must stay above it when compared in float32 (no rounding back onto the max)."""
+    scores = np.array([[0.3, 0.7]], dtype=np.float32)
+    tau = select_threshold_for_budget(scores, 1.0, 1.0, budget=0.0, unit="components")
+    assert count_false_alarms(scores >= tau, "components") == 0

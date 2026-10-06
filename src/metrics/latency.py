@@ -93,3 +93,13 @@ def _detected_by(cutoffs: np.ndarray, probs: np.ndarray, deadline: float, tau: f
     if not keep.any():
         return False
     return bool(~np.isnan(first_detection_day(np.asarray(cutoffs)[keep], np.asarray(probs)[keep], tau, persist_k)))
+
+
+def recall_from_detection_days(det_days: np.ndarray, ref_days: np.ndarray, offsets: Sequence[float]) -> dict:
+    """Recall at ref + offset from causal detection days (equals `recall_at_offsets`; used for per-pixel curves)."""
+    det_days = np.asarray(det_days, dtype=float)
+    ref_days = np.asarray(ref_days, dtype=float)
+    has_ref = ~np.isnan(ref_days)
+    det, ref = det_days[has_ref], ref_days[has_ref]
+    recall = {off: float(np.mean(det <= ref + off)) if ref.size else float("nan") for off in offsets}
+    return {"n": int(has_ref.sum()), "n_no_reference": int((~has_ref).sum()), "recall": recall}

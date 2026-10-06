@@ -56,14 +56,17 @@ def select_threshold_for_budget(
     Use VALIDATION negatives only (the caller guarantees the split). Candidates default to the unique scores
     plus one value just above the maximum (zero alarms), so a feasible tau always exists. The "every larger
     candidate" clause matters only for components, whose count is not monotone in tau (a blob can split).
+    Candidates are kept in the scores' float dtype, so `scores >= tau` reproduces the counted alarms exactly.
     """
     if unit not in UNITS:
         raise ValueError(f"unit must be one of {UNITS}")
     if area_km2 <= 0 or months <= 0:
         raise ValueError("area_km2 and months must be positive")
-    scores = as_numpy(neg_scores_val).astype(float)
-    top = np.nextafter(scores.max(), np.inf)
-    grid = np.unique(scores if candidates is None else np.asarray(candidates, dtype=float))
+    scores = as_numpy(neg_scores_val)
+    dtype = scores.dtype.type if np.issubdtype(scores.dtype, np.floating) else np.float64
+    scores = scores.astype(dtype)
+    top = np.nextafter(scores.max(), dtype(np.inf))
+    grid = np.unique(scores if candidates is None else np.asarray(candidates, dtype=dtype))
     grid = np.append(grid[grid < top], top)
     if unit == "pixels":
         sorted_scores = np.sort(scores.ravel())

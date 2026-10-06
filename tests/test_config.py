@@ -10,6 +10,7 @@ REPO = Path(__file__).resolve().parents[1]
 from src.config import load_config, require
 from src.losses.build_loss import build_loss
 from src.models.build_model import build_model
+from src.reference_run import check_upstream_compatible
 
 MODEL_CONFIGS = ["convlstm", "convgru", "unet3d", "utae_seq2seq"]
 
@@ -101,3 +102,13 @@ def test_model_configs_build(configs_dir: Path, name: str) -> None:
         {k: v for k, v in focal.items() if k not in ("model", "experiment_name")}
     assert "_replace" not in cfg["model"]["params"]
     build_model(cfg["model"])
+
+
+@pytest.mark.parametrize("name", ["reference_baseline_utae", "reference_baseline_utae_focal",
+                                  "smoke/reference_utae_ce", "smoke/reference_utae_focal"])
+def test_reference_configs_are_upstream_compatible(configs_dir: Path, name: str) -> None:
+    """Reference configs keep the recipe, use their own run dir and only ask for what upstream can do."""
+    cfg = load_config(configs_dir / f"{name}.yaml")
+    check_upstream_compatible(cfg)
+    assert cfg["experiment_name"].startswith(("reference_", "smoke_reference_"))
+    assert require(cfg, "reference.split") + "_set" == require(cfg, "data.split_column")
