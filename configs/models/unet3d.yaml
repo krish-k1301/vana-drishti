@@ -1,0 +1,15 @@
+# Tier A benchmark (PRD 6): 3D U-Net, wrapper src/models/unet3d.py::TimePaddedUNet3D
+# (pads the time axis with zero frames to a multiple of 4, minimum 4).
+# Loss and training recipe inherited: focal alpha 0.75, gamma 1.0.
+base: ../baseline_utae_focal.yaml
+experiment_name: unet3d
+
+model:
+  name: unet3d
+  params:
+    _replace: true
+    in_channel: 2   # VV, VH; upstream UNet3D default
+    n_classes: 2    # binary change map; upstream default
+    feats: 8        # upstream UNet3D default; utae-paps model_utils.py uses the same default
+    pad_value: 0    # upstream default; must match SegmentNetwork zero padding
+    zero_pad: true  # upstream default

@@ -1,0 +1,15 @@
+# Tier A benchmark (PRD 6): ConvLSTM, padding-aware wrapper src/models/recurrent.py::MaskedConvLSTMSeg.
+# Loss and training recipe inherited: focal alpha 0.75, gamma 1.0.
+base: ../baseline_utae_focal.yaml
+experiment_name: convlstm
+
+model:
+  name: convlstm
+  params:
+    _replace: true
+    num_classes: 2        # binary change map, as UTAE out_conv[-1]
+    input_size: [48, 48]  # BraDD patch size; upstream ConvLSTM_Seg default (48, 48)
+    input_dim: 2          # VV, VH; upstream ConvLSTM_Seg default
+    hidden_dim: 160       # upstream ConvLSTM_Seg default; same in utae-paps model_utils.py
+    kernel_size: [3, 3]   # upstream default; only 3x3 supported (head conv hard-codes padding=1)
+    pad_value: 0          # upstream default; must match SegmentNetwork zero padding

@@ -1,0 +1,93 @@
+# U-TAE baseline reproduction, cross-entropy (PRD 4.2, Table 1 target: 47.3% pixel IoU).
+# Every value is explicit; nothing relies on library defaults.
+# PRD 4.2 row                         -> key(s) below
+#   Backbone U-TAE                    -> model.name: utae
+#   encoder/decoder widths (repo)     -> model.params.encoder_widths / decoder_widths
+#   Encoder stages: 3 strided downs   -> model.params.str_conv_k/s/p = 4/2/1 (48 -> 24 -> 12 -> 6x6)
+#   agg_mode, encoder_norm (repo)     -> model.params.agg_mode: att_group, encoder_norm: group
+#   n_head 8 (paper best, repo 16)    -> model.params.n_head: 8
+#   d_model, d_k (repo)               -> model.params.d_model: 256, d_k: 4
+#   Positional encoding period T      -> model.params.positional_encoding_period: 1000
+#   Loss: cross-entropy (Table 1)     -> loss.name: cross_entropy
+#   Optimiser AdamW lr 1e-3 wd 1e-6   -> optim.*  (repo default wd is 0.0; paper value used)
+#   ReduceLROnPlateau on val IoU      -> optim.scheduler.* (mode max, patience 10)
+#   Early stopping                    -> trainer.early_stopping.* (patience 30, min_delta 0.001), max_epochs 200
+#   Batch size 4                      -> data.batch_size: 4 (inherited from configs/data/bradd.yaml)
+#   Normalisation z-score, train stats-> data section (configs/data/bradd.yaml)
+#   Forward mode segment +-30 days    -> model.forward_type: segment, error_days_before/after: 30
+#   Seed 42                           -> seed: 42
+#   Split close_set column            -> data section (configs/data/bradd.yaml)
+experiment_name: baseline_utae
+seed: 42
+seed_workers: true  # upstream: pl.seed_everything(42, workers=True)
+
+data:
+  base: data/bradd.yaml  # data-agent owns this file; its content is the bare `data` section
+
+model:
+  name: utae
+  forward_type: segment
+  error_days_before: 30
+  error_days_after: 30
+  params:
+    input_dim: 2
+    encoder_widths: [64, 64, 64, 128]
+    decoder_widths: [32, 32, 64, 128]
+    out_conv: [32, 2]
+    str_conv_k: 4
+    str_conv_s: 2
+    str_conv_p: 1
+    agg_mode: att_group
+    encoder_norm: group
+    n_head: 8
+    d_model: 256
+    d_k: 4
+    pad_value: 0
+    padding_mode: reflect
+    positional_encoding_period: 1000
+
+loss:
+  name: cross_entropy
+
+optim:
+  name: adamw
+  lr: 1.0e-3
+  weight_decay: 1.0e-6
+  betas: [0.9, 0.999]  # torch default, used implicitly upstream
+  eps: 1.0e-8          # torch default, used implicitly upstream
+  scheduler:
+    name: reduce_on_plateau
+    monitor: validation/pixel_iou
+    mode: max
+    patience: 10
+    factor: 0.1           # torch default, used implicitly upstream
+    threshold: 1.0e-4     # torch default
+    threshold_mode: rel   # torch default
+    cooldown: 0           # torch default
+    min_lr: 0.0           # torch default
+
+trainer:
+  max_epochs: 200
+  max_time: {days: 6, hours: 23}
+  precision: 32
+  accelerator: auto
+  deterministic: false        # as upstream (fast, not bit-reproducible on GPU)
+  num_sanity_val_steps: 0
+  float32_matmul_precision: medium  # upstream: torch.set_float32_matmul_precision('medium')
+  early_stopping:
+    monitor: validation/pixel_iou
+    mode: max
+    patience: 30
+    min_delta: 0.001
+  checkpoint:
+    monitor: validation/pixel_iou
+    mode: max
+    save_top_k: 1
+
+output:
+  runs_dir: results/runs  # run directory = <runs_dir>/<experiment_name>
+
+logging:
+  csv: true
+  tensorboard: false
+  wandb: false

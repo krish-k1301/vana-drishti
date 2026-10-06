@@ -1,0 +1,9 @@
+# U-TAE baseline with focal loss (PRD 4.2, Table 2 target: about 48.6% pixel IoU).
+# Only the loss differs from baseline_utae.yaml. gamma is 1.0 (paper best), not upstream's default 2.0.
+base: baseline_utae.yaml
+experiment_name: baseline_utae_focal
+
+loss:
+  name: focal
+  alpha: 0.75
+  gamma: 1.0

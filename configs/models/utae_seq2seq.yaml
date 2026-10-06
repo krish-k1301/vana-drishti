@@ -1,0 +1,7 @@
+# Tier A free ablation (PRD 6): U-TAE with upstream's sLTAE self-attention over dates before the L-TAE.
+# Same backbone hyperparameters as the baseline; upstream sets the sLTAE feed-forward width to 2 * d_model.
+base: ../baseline_utae_focal.yaml
+experiment_name: utae_seq2seq
+
+model:
+  name: utae_seq2seq
