@@ -3,8 +3,8 @@ import importlib.util
 import json
 import subprocess
 import sys
-from collections.abc import Iterator
 from pathlib import Path
+from types import ModuleType
 
 import pandas as pd
 import pytest
@@ -13,7 +13,7 @@ import torch
 from src import early_eval
 from src.config import load_config
 from src.data.samples import load_sample
-from src.evaluation.early_records import event_mask
+from src.evaluation.early_records import event_mask, references
 from src.evaluation.prefix_inference import combine_intervals, prefix_from_config, prefix_inputs, valid_cutoffs
 from src.losses.build_loss import build_loss
 from src.models.build_model import build_model
@@ -27,7 +27,7 @@ TINY_UTAE = [
 ]
 
 
-def plot_module():
+def plot_module() -> ModuleType:
     """Import scripts/plot_early.py (scripts/ is not a package)."""
     spec = importlib.util.spec_from_file_location("plot_early", REPO / "scripts" / "plot_early.py")
     module = importlib.util.module_from_spec(spec)
@@ -36,15 +36,6 @@ def plot_module():
 
 
 OUTPUTS = ("curves.csv", "events.csv", "latency.csv", "recall.csv", "false_alarms.csv", "summary.json")
-
-
-@pytest.fixture(scope="module", autouse=True)
-def single_thread() -> Iterator[None]:
-    """Run this module's tiny CPU models on one thread (much faster than oversubscribed BLAS threads)."""
-    threads = torch.get_num_threads()
-    torch.set_num_threads(1)
-    yield
-    torch.set_num_threads(threads)
 
 
 @pytest.fixture(scope="module", name="setup")
@@ -145,6 +136,18 @@ def test_early_eval_end_to_end(setup: tuple[dict, Path, dict], tmp_path: Path, m
         assert (tmp_path / png).stat().st_size > 0
     saved = json.loads((tmp_path / "summary.json").read_text())
     assert saved["mmu"].startswith("MMU") and plot_module().prefix_title(saved, "x").startswith("SMOKE x")
+
+
+def test_event_reference_is_required_and_checked() -> None:
+    """The event-date reference name comes from the eval config; recall must use one of the reference names."""
+    eval_cfg = load_config(REPO / "configs" / "eval" / "early.yaml")
+    assert references(eval_cfg) == ("deter", "burn", "radd")
+    with pytest.raises(KeyError, match="event_reference"):
+        references({k: v for k, v in eval_cfg.items() if k != "event_reference"})
+    with pytest.raises(ValueError, match="recall_reference"):
+        references({**eval_cfg, "event_reference": "hansen_year_end"})
+    with pytest.raises(ValueError, match="clashes"):
+        references({**eval_cfg, "event_reference": "radd"})
 
 
 def test_early_eval_refuses_bradd_config(setup: tuple[dict, Path, dict]) -> None:

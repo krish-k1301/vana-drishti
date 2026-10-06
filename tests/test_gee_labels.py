@@ -17,7 +17,8 @@ from gee.sampling import block_index, split_of_block
 WINDOW = Window(dt.date(2021, 6, 1), dt.date(2022, 9, 29))
 
 
-def test_label_image_concatenates_requested_sources(monkeypatch):
+def test_label_image_concatenates_requested_sources(monkeypatch) -> None:
+    """label_image concatenates only the requested label sources; unknown sources raise KeyError."""
     fake = MagicMock()
     monkeypatch.setattr(labels, "ee", fake)
     cfg = load_config("configs/gee/amazon_dated.yaml")["labels"]
@@ -29,7 +30,8 @@ def test_label_image_concatenates_requested_sources(monkeypatch):
         labels.label_image(cfg, ["nicfi"], "region", WINDOW)
 
 
-def test_fogo_selects_one_band_per_window_year(monkeypatch):
+def test_fogo_selects_one_band_per_window_year(monkeypatch) -> None:
+    """MapBiomas Fogo selects one band per window year and band names follow the pull list."""
     fake = MagicMock()
     monkeypatch.setattr(labels, "ee", fake)
     labels.fogo_image({"asset": "A", "band_template": "burned_{year}"}, WINDOW.years)
@@ -38,7 +40,8 @@ def test_fogo_selects_one_band_per_window_year(monkeypatch):
     assert names == ["radd_alert", "radd_date", "fogo_2021", "fogo_2022", "modis_burn"]
 
 
-def test_class_codes_and_positive_class(monkeypatch):
+def test_class_codes_and_positive_class(monkeypatch) -> None:
+    """Negative class codes follow config order; the class image uses them and ends with the Hansen positive code."""
     fake = MagicMock()
     monkeypatch.setattr(labels, "ee", fake)
     cfg = load_config("configs/gee/congo_pilot.yaml")
@@ -88,7 +91,8 @@ def assert_no_overlap(specs: list) -> None:
                 assert ax1 <= bx0 or bx1 <= ax0 or ay1 <= by0 or by1 <= ay0
 
 
-def test_spacing_below_patch_diagonal_is_rejected(tmp_path):
+def test_spacing_below_patch_diagonal_is_rejected(tmp_path) -> None:
+    """A minimum centre distance below the patch diagonal is rejected at config load."""
     cfg = yaml.safe_load(Path("configs/gee/amazon_dated.yaml").read_text(encoding="utf-8"))
     cfg["split"]["min_center_distance_m"] = 480
     (tmp_path / "c.yaml").write_text(yaml.safe_dump(cfg))
@@ -96,7 +100,8 @@ def test_spacing_below_patch_diagonal_is_rejected(tmp_path):
         load_config(str(tmp_path / "c.yaml"))
 
 
-def test_plan_hansen_split_by_blocks(monkeypatch):
+def test_plan_hansen_split_by_blocks(monkeypatch) -> None:
+    """Hansen-sourced planning caps positives, dates events at 31 Dec and labels the region."""
     cfg = load_config("configs/gee/congo_pilot.yaml")
     mode = cfg["modes"]["pilot"]
     monkeypatch.setattr(labels, "class_image", MagicMock())
@@ -115,7 +120,8 @@ def test_plan_hansen_split_by_blocks(monkeypatch):
     assert {s.sampling_type for s in specs} - {"positive"} <= set(cfg["negatives"]["type_weights"])
 
 
-def test_plan_deter_positives_and_event_screening(tmp_path, monkeypatch):
+def test_plan_deter_positives_and_event_screening(tmp_path, monkeypatch) -> None:
+    """DETER-sourced planning keeps positive-class polygons and screens negatives near events."""
     cfg = load_config("configs/gee/amazon_dated.yaml")
     mode = {**cfg["modes"]["pilot"], "max_positives": 5}
     polys = [box(-55.9 + 0.1 * i, -7.4, -55.895 + 0.1 * i, -7.395) for i in range(6)]

@@ -20,7 +20,8 @@ def clean_env(home: Path) -> dict:
     return env
 
 
-def test_cli_pilot_without_credentials_prints_blocked(tmp_path):
+def test_cli_pilot_without_credentials_prints_blocked(tmp_path) -> None:
+    """Without Earth Engine credentials the pilot CLI exits with EXIT_BLOCKED and a BLOCKED message."""
     result = subprocess.run([sys.executable, "gee/run_export.py", "--config", "configs/gee/amazon_dated.yaml",
                              "--pilot"], cwd=REPO, env=clean_env(tmp_path), capture_output=True, text=True,
                             timeout=120)
@@ -28,7 +29,8 @@ def test_cli_pilot_without_credentials_prints_blocked(tmp_path):
     assert result.stderr.startswith("BLOCKED: no Earth Engine credentials")
 
 
-def test_initialize_raises_typed_error_and_detects_sources(tmp_path, monkeypatch):
+def test_initialize_raises_typed_error_and_detects_sources(tmp_path, monkeypatch) -> None:
+    """initialize raises EarthEngineUnavailable without credentials and detects each credential source."""
     monkeypatch.setattr(auth, "user_credentials_path", lambda: str(tmp_path / "none"))
     assert auth.credential_source({}) is None
     try:
@@ -44,7 +46,8 @@ def test_initialize_raises_typed_error_and_detects_sources(tmp_path, monkeypatch
     assert auth.credential_source({auth.SERVICE_ACCOUNT_ENV: "sa", auth.KEY_FILE_ENV: str(tmp_path / "x")}) is None
 
 
-def test_placeholders_refuse_the_amazon_pilot(monkeypatch, capsys):
+def test_placeholders_refuse_the_amazon_pilot(monkeypatch, capsys) -> None:
+    """Placeholder assets in the Amazon config make the pilot refuse to run (EXIT_REFUSED)."""
     monkeypatch.setattr(run_export, "initialize", lambda: "user")
     code = run_export.main(["--config", "configs/gee/amazon_dated.yaml", "--pilot"])
     assert code == run_export.EXIT_REFUSED
@@ -62,7 +65,8 @@ def resolved_config(tmp_path: Path) -> Path:
     return path
 
 
-def test_full_export_refused_until_pilot_qa_passed(tmp_path, monkeypatch, capsys):
+def test_full_export_refused_until_pilot_qa_passed(tmp_path, monkeypatch, capsys) -> None:
+    """A full export is refused until a passed pilot QA summary with the same config hash exists."""
     monkeypatch.setattr(run_export, "initialize", lambda: "user")
     monkeypatch.setattr(run_export, "run", lambda cfg, mode: 0)
     path = resolved_config(tmp_path)

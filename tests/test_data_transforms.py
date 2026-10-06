@@ -29,7 +29,7 @@ def _toy(total: int) -> dict:
 
 
 @pytest.mark.parametrize("total,num", [(19, 5), (31, 10), (40, 2), (23, 22), (50, 50), (63, 7)])
-def test_uniform_equals_upstream(total, num):
+def test_uniform_equals_upstream(total, num) -> None:
     """Mode 'uniform' selects exactly the dates upstream TemporalDropout(is_random=True) keeps."""
     upstream = _upstream_dropout()(is_random=True, num_temporal=num)(_toy(total))
     ours = TemporalSubsample("uniform", num)(_toy(total))
@@ -37,7 +37,7 @@ def test_uniform_equals_upstream(total, num):
     assert torch.equal(ours["Images"], upstream["Images"])
 
 
-def test_uniform_on_fixture_sample_matches_upstream(bradd_root):
+def test_uniform_on_fixture_sample_matches_upstream(bradd_root) -> None:
     """Same equivalence on a real dataset item from the fixture."""
     ds = BraDDDataset(bradd_root, "train", normalization="none")
     item = ds[0]
@@ -45,7 +45,7 @@ def test_uniform_on_fixture_sample_matches_upstream(bradd_root):
     assert torch.equal(TemporalSubsample("uniform", 6)(item)["ImageDays"], upstream["ImageDays"])
 
 
-def test_random_keeps_ends_and_is_seeded():
+def test_random_keeps_ends_and_is_seeded() -> None:
     """Mode 'random' keeps first/last, varies between calls and is reproducible."""
     a, b = TemporalSubsample("random", 6, seed=3), TemporalSubsample("random", 6, seed=3)
     draws = [a.indices(30) for _ in range(5)]
@@ -56,7 +56,7 @@ def test_random_keeps_ends_and_is_seeded():
     assert a.indices(30) == draws[0]
 
 
-def test_last_only_and_none():
+def test_last_only_and_none() -> None:
     """Mode 'last_only' keeps only the last date; 'none' keeps all; labels untouched."""
     item = _toy(12)
     last = TemporalSubsample("last_only", 1)(item)
@@ -65,13 +65,13 @@ def test_last_only_and_none():
     assert last["Targets"] is item["Targets"]
 
 
-def test_num_dates_at_least_length_keeps_all():
+def test_num_dates_at_least_length_keeps_all() -> None:
     """Asking for more dates than exist keeps every date."""
     for mode in ("uniform", "random"):
         assert TemporalSubsample(mode, 40).indices(25) == list(range(25))
 
 
-def test_invalid_arguments():
+def test_invalid_arguments() -> None:
     """Unknown modes and num_dates < 2 for uniform are rejected."""
     with pytest.raises(ValueError):
         TemporalSubsample("uniform", 1)
@@ -79,7 +79,7 @@ def test_invalid_arguments():
         TemporalSubsample("bogus", 5)
 
 
-def test_workers_reseed_random_mode(bradd_root):
+def test_workers_reseed_random_mode(bradd_root) -> None:
     """Random subsampling with worker processes is reproducible across runs."""
     cfg = data_config("bradd", root=str(bradd_root), normalization="none", batch_size=2, num_workers=2, seed=7,
                       temporal_subsample={"mode": "random", "num_dates": 4, "at_test": False})

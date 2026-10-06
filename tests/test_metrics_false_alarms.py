@@ -25,7 +25,8 @@ def _negatives():
     return pred
 
 
-def test_count_components_and_pixels():
+def test_count_components_and_pixels() -> None:
+    """False alarms count as 8-connected components or pixels; unknown units raise."""
     pred = _negatives()
     assert count_false_alarms(pred, "components") == 4
     assert count_false_alarms(pred, "pixels") == 8
@@ -34,13 +35,15 @@ def test_count_components_and_pixels():
         count_false_alarms(pred, "patches")
 
 
-def test_rate_and_area():
+def test_rate_and_area() -> None:
+    """The false-alarm rate is alarms per km^2 per month over the negative area."""
     area = pixels_to_km2(200, pixel_area_ha=0.01)
     assert area == pytest.approx(0.02)
     assert false_alarm_rate(_negatives(), area, months=2.0) == pytest.approx(4 / 0.02 / 2)
 
 
-def test_select_threshold_pixels():
+def test_select_threshold_pixels() -> None:
+    """The chosen tau is the lowest that keeps alarms within the budget."""
     scores = np.array([[0.1, 0.2, 0.3, 0.4, 0.5]])
     # area 1 km^2, 1 month: budget 2 alarms allows tau=0.4 (0.4, 0.5 positive)
     assert select_threshold_for_budget(scores, 1.0, 1.0, budget=2.0, unit="pixels") == pytest.approx(0.4)
@@ -49,7 +52,7 @@ def test_select_threshold_pixels():
     assert tau > 0.5 and count_false_alarms(scores >= tau, "pixels") == 0
 
 
-def test_select_threshold_components_non_monotone():
+def test_select_threshold_components_non_monotone() -> None:
     """Raising tau from 0.1 to 0.5 splits one blob into two; the chosen tau must stay within budget above it."""
     scores = np.array([[0.9, 0.1, 0.9, 0.0, 0.0]])
     tau = select_threshold_for_budget(scores, 1.0, 1.0, budget=1.0, unit="components")
@@ -57,7 +60,8 @@ def test_select_threshold_components_non_monotone():
     assert select_threshold_for_budget(scores, 1.0, 1.0, budget=2.0, unit="components") == pytest.approx(0.0)
 
 
-def test_select_threshold_with_candidates():
+def test_select_threshold_with_candidates() -> None:
+    """With a candidate grid, tau is the lowest candidate within the budget."""
     scores = np.random.default_rng(0).random((3, 8, 8))
     grid = np.linspace(0, 1, 101)
     tau = select_threshold_for_budget(scores, 1.0, 1.0, budget=10.0, unit="pixels", candidates=grid)
@@ -65,7 +69,7 @@ def test_select_threshold_with_candidates():
     assert count_false_alarms(scores >= tau - 0.01, "pixels") > 10
 
 
-def test_select_threshold_float32_scores_respect_budget():
+def test_select_threshold_float32_scores_respect_budget() -> None:
     """tau above the max must stay above it when compared in float32 (no rounding back onto the max)."""
     scores = np.array([[0.3, 0.7]], dtype=np.float32)
     tau = select_threshold_for_budget(scores, 1.0, 1.0, budget=0.0, unit="components")

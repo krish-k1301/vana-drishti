@@ -18,7 +18,8 @@ def spec(i: int) -> PatchSpec:
                      "b-111_-15", "train", i, i, "")
 
 
-def test_completed_and_pending_are_skipped_failed_retried_until_limit(tmp_path):
+def test_completed_and_pending_are_skipped_failed_retried_until_limit(tmp_path) -> None:
+    """Completed and pending patches are skipped; failed ones are retried until the attempt limit."""
     log = TaskLog(str(tmp_path / "raw" / "log.jsonl"))
     log.append("done", "COMPLETED", "direct")
     log.append("queued", "SUBMITTED", "batch", "T1")
@@ -31,7 +32,8 @@ def test_completed_and_pending_are_skipped_failed_retried_until_limit(tmp_path):
     assert log.pending_tasks() == {"T1": "queued"}
 
 
-def test_torn_last_line_is_ignored(tmp_path):
+def test_torn_last_line_is_ignored(tmp_path) -> None:
+    """A torn last log line is ignored when reading the task log."""
     path = tmp_path / "log.jsonl"
     log = TaskLog(str(path))
     log.append("a", "COMPLETED", "direct")
@@ -40,10 +42,12 @@ def test_torn_last_line_is_ignored(tmp_path):
     assert list(log.latest()) == ["a"]
 
 
-def test_export_all_resumes_without_redoing_finished_patches(tmp_path, monkeypatch):
+def test_export_all_resumes_without_redoing_finished_patches(tmp_path, monkeypatch) -> None:
+    """A second export_all skips every patch the first run completed."""
     calls = []
 
-    def fake_export(cfg, s, raw_dir, log, backend):
+    def fake_export(cfg, s, raw_dir, log, backend) -> str:
+        """Record the patch and log it as completed."""
         calls.append(s.patch_id)
         log.append(s.patch_id, "COMPLETED", backend)
         return "COMPLETED"
@@ -57,7 +61,8 @@ def test_export_all_resumes_without_redoing_finished_patches(tmp_path, monkeypat
     assert calls == ["p0", "p1", "p2"]
 
 
-def test_refresh_batch_logs_terminal_states(tmp_path, monkeypatch):
+def test_refresh_batch_logs_terminal_states(tmp_path, monkeypatch) -> None:
+    """refresh_batch logs completed and failed batch tasks and keeps running ones pending."""
     fake = MagicMock()
     fake.data.getTaskStatus.return_value = [{"id": "T1", "state": "COMPLETED"}, {"id": "T2", "state": "RUNNING"},
                                             {"id": "T3", "state": "FAILED", "error_message": "quota"}]
@@ -69,7 +74,8 @@ def test_refresh_batch_logs_terminal_states(tmp_path, monkeypatch):
     assert log.pending_tasks() == {"T2": "p2"}
 
 
-def test_direct_pull_uses_patch_grid_and_numpy_format(monkeypatch):
+def test_direct_pull_uses_patch_grid_and_numpy_format(monkeypatch) -> None:
+    """pull_direct requests the patch grid in NUMPY_NDARRAY format and returns bands by name."""
     fake = MagicMock()
     fake.data.computePixels.return_value = np.zeros((48, 48), dtype=[("t000_VV", "f4"), ("t000_VH", "f4")])
     monkeypatch.setattr(export, "ee", fake)
@@ -80,7 +86,8 @@ def test_direct_pull_uses_patch_grid_and_numpy_format(monkeypatch):
     assert set(bands) == {"t000_VV", "t000_VH"} and bands["t000_VV"].shape == (48, 48)
 
 
-def test_raw_npz_round_trip_and_batch_table_rebuild(tmp_path):
+def test_raw_npz_round_trip_and_batch_table_rebuild(tmp_path) -> None:
+    """Raw bands round-trip through npz and batch tables rebuild onto the patch grid."""
     grid = make_grid(-55.4, -7.0, 48, 10.0)
     bands = {"t000_VV": np.random.default_rng(0).normal(-8, 1, (48, 48))}
     export.save_raw(str(tmp_path), "p0", bands, {"bands": ["t000_VV"]})

@@ -18,32 +18,37 @@ from src.metrics.latency import (  # noqa: E402
 CUT = np.array([0.0, 12.0, 24.0, 36.0, 48.0])
 
 
-def test_first_crossing_single_curve():
+def test_first_crossing_single_curve() -> None:
+    """Detection day is the first cutoff whose probability reaches tau."""
     probs = np.array([0.1, 0.6, 0.2, 0.7, 0.9])
     assert first_detection_day(CUT, probs, tau=0.5) == 12.0
 
 
-def test_persistence_reports_confirmation_day():
+def test_persistence_reports_confirmation_day() -> None:
+    """With persist_k, detection is the day the k-th consecutive crossing confirms it."""
     probs = np.array([0.1, 0.6, 0.2, 0.7, 0.9])
     assert first_detection_day(CUT, probs, tau=0.5, persist_k=2) == 48.0
     assert np.isnan(first_detection_day(CUT, probs, tau=0.5, persist_k=3))
     assert np.isnan(first_detection_day(CUT, probs, tau=0.5, persist_k=10))
 
 
-def test_per_pixel_curves():
+def test_per_pixel_curves() -> None:
+    """first_detection_day works per pixel along the cutoff axis; never-detected pixels are NaN."""
     probs = np.array([[0.0, 0.9, 0.0], [0.6, 0.9, 0.0], [0.6, 0.9, 0.4]] + [[0.6, 0.9, 0.4]] * 2)
     days = first_detection_day(CUT, probs, tau=0.5)
     np.testing.assert_array_equal(days[:2], [12.0, 0.0])
     assert np.isnan(days[2])
 
 
-def test_tau_is_inclusive_and_cutoffs_validated():
+def test_tau_is_inclusive_and_cutoffs_validated() -> None:
+    """A probability equal to tau counts as detected; non-increasing cutoffs raise."""
     assert first_detection_day(CUT[:2], np.array([0.5, 0.5]), tau=0.5) == 0.0
     with pytest.raises(ValueError):
         first_detection_day(np.array([0.0, 0.0]), np.array([0.1, 0.2]), tau=0.5)
 
 
-def test_latency_summary_keeps_missed_and_excludes_no_reference():
+def test_latency_summary_keeps_missed_and_excludes_no_reference() -> None:
+    """Latency summaries count missed events and exclude events without a reference."""
     det = np.array([10.0, 20.0, 30.0, np.nan, 5.0])
     ref = np.array([0.0, 0.0, 0.0, 0.0, np.nan])
     out = latency_summary(det, ref)
@@ -52,12 +57,14 @@ def test_latency_summary_keeps_missed_and_excludes_no_reference():
     assert (out["q25"], out["q75"], out["iqr"]) == (15.0, 25.0, 10.0)
 
 
-def test_negative_latency_when_beating_reference():
+def test_negative_latency_when_beating_reference() -> None:
+    """Detection before the reference date gives a negative latency."""
     out = latency_summary(np.array([-6.0]), np.array([6.0]))
     assert out["median"] == -12.0
 
 
-def test_latency_summary_all_missed():
+def test_latency_summary_all_missed() -> None:
+    """With every event missed the median latency is NaN."""
     out = latency_summary(np.array([np.nan]), np.array([3.0]))
     assert out["n_missed"] == 1 and np.isnan(out["median"])
 
@@ -71,14 +78,15 @@ def _curves():
     ]
 
 
-def test_recall_at_offsets():
+def test_recall_at_offsets() -> None:
+    """Recall at reference + offset uses only cutoffs up to each deadline."""
     ref = np.array([12.0, 12.0, 12.0, np.nan])
     out = recall_at_offsets(_curves(), ref, offsets=(0, 12, 36, 90), tau=0.5)
     assert (out["n"], out["n_no_reference"]) == (3, 1)
     assert out["recall"] == pytest.approx({0: 0.0, 12: 1 / 3, 36: 2 / 3, 90: 2 / 3})
 
 
-def test_recall_equals_detection_day_rule():
+def test_recall_equals_detection_day_rule() -> None:
     """Truncating to cutoffs <= deadline agrees with comparing the (causal) detection day to the deadline."""
     rng = np.random.default_rng(0)
     curves = [(CUT, rng.random(5)) for _ in range(50)]
@@ -90,7 +98,8 @@ def test_recall_equals_detection_day_rule():
             assert out["recall"][off] == pytest.approx(np.mean(det <= ref + off))
 
 
-def test_recall_from_detection_days_matches_curves():
+def test_recall_from_detection_days_matches_curves() -> None:
+    """Recall from detection days equals recall from the full curves."""
     ref = np.array([12.0, 12.0, 12.0, np.nan])
     det = detection_days(_curves(), tau=0.5)
     fast = recall_from_detection_days(det, ref, offsets=(0, 12, 36))

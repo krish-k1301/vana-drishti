@@ -5,7 +5,8 @@ interval_combiner: noisy_or # noisy_or: 1 - prod(1 - p_k) over the prefix label 
 cutoff_batch_size: 8        # prefixes run through the model at once (memory only, no effect on results)
 event_curve: mean           # mean | max over event-mask pixels: the per-event curve used for event latency
 persist_k: 1                # consecutive cutoffs >= tau needed to call a detection (1 = first crossing)
-recall_reference: deter     # deter | burn | radd: reference date for recall at offsets
+event_reference: deter      # name of the per-sample event date (EventDay) in latency/recall tables: deter = DETER alert day
+recall_reference: deter     # <event_reference> | burn | radd: reference date for recall at offsets
 recall_offsets_days: [0, 12, 24, 48, 90]   # recall at reference date + offset (PRD 7 Phase 5)
 false_alarms:
   budget_per_km2_month: 0.5 # false-alarm budget used to choose tau on VALIDATION negatives

@@ -1,7 +1,9 @@
 """Per-event and per-pixel records from sliding-prefix probabilities (PRD 3, 7 Phase 5).
 
 Reference days (all on the sample's day-offset origin, NaN = none):
-- `deter`: the DETER alert day `EventDay`, for the event and for every event pixel (NaN outside Brazil).
+- `<event_reference>`: the sample's `EventDay`, for the event and for every event pixel. Its name comes from the
+  required eval-config key `event_reference` (Amazon: `deter`, the DETER alert day; Phase 6: `hansen_year_end`,
+  31 Dec of the Hansen loss year, 1-year resolution), so a Hansen date is never reported as DETER.
 - `burn` / `radd`: per pixel `BurnDay` / `RaddDay`; per event the earliest such day inside the event mask.
 Event pixels are `EventMask` minus `label[0]` (pre-existing clearing at the first label date).
 Strata: DETER stage (class name mapped by the eval config), size bin of the event mask (event: total mask
@@ -16,7 +18,18 @@ from src.evaluation.io import pixel_area_ha
 from src.metrics.latency import first_detection_day
 from src.metrics.strata import EDGE_NAMES, bin_labels, edge_interior, size_bins
 
-REFERENCES = ("deter", "burn", "radd")
+PIXEL_REFERENCES = ("burn", "radd")
+
+
+def references(eval_cfg: dict) -> tuple[str, ...]:
+    """Reference names: the configured `event_reference` (required) then burn, radd; checks `recall_reference`."""
+    name = eval_cfg["event_reference"]
+    if name in PIXEL_REFERENCES:
+        raise ValueError(f"event_reference {name!r} clashes with a per-pixel reference")
+    names = (name, *PIXEL_REFERENCES)
+    if eval_cfg["recall_reference"] not in names:
+        raise ValueError(f"recall_reference {eval_cfg['recall_reference']!r} is not one of {names}")
+    return names
 
 
 def days_or_nan(values: np.ndarray) -> np.ndarray:
@@ -42,6 +55,8 @@ class EarlyCollector:
     def __init__(self, eval_cfg: dict, tau: float) -> None:
         """Read stratification and detection settings from the early eval config."""
         self.tau = tau
+        self.references = references(eval_cfg)
+        self.event_reference = self.references[0]
         self.persist_k = int(eval_cfg["persist_k"])
         self.event_curve = eval_cfg["event_curve"]
         if self.event_curve not in ("mean", "max"):
@@ -69,7 +84,7 @@ class EarlyCollector:
                                     "prob_mean": float(curves["mean"][k]), "prob_max": float(curves["max"][k])})
         curve = curves[self.event_curve]
         area = float(mask.sum()) * self.pixel_area
-        refs = {"deter": event_day, "burn": earliest(item["BurnDay"].numpy()[mask]),
+        refs = {self.event_reference: event_day, "burn": earliest(item["BurnDay"].numpy()[mask]),
                 "radd": earliest(item["RaddDay"].numpy()[mask])}
         detection = float(first_detection_day(cutoffs, curve, self.tau, self.persist_k))
         self.event_rows.append({**base, "size_bin": self.labels[int(np.digitize(area, self.bins))], "area_ha": area,
@@ -88,7 +103,7 @@ class EarlyCollector:
             "size_bin": [self.labels[b] for b in bin_map[mask]],
             "edge_interior": [EDGE_NAMES[r] for r in region[mask]],
             "detection_day": first_detection_day(cutoffs, inside, self.tau, self.persist_k),
-            "ref_deter": event_day,
+            f"ref_{self.event_reference}": event_day,
             "ref_burn": days_or_nan(item["BurnDay"].numpy()[mask]),
             "ref_radd": days_or_nan(item["RaddDay"].numpy()[mask]),
         })

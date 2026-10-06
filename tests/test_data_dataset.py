@@ -15,7 +15,7 @@ def _raw_images(root, phase):
     return torch.cat([load_sample(root / "Samples" / f)["image"] for f in files]).double()
 
 
-def test_stats_use_train_split_only(bradd_root):
+def test_stats_use_train_split_only(bradd_root) -> None:
     """Stats equal the train-split moments and differ from all-split moments."""
     stats = compute_train_stats(bradd_root, "close_set")
     train = _raw_images(bradd_root, "train").transpose(0, 1).reshape(2, -1)
@@ -26,7 +26,7 @@ def test_stats_use_train_split_only(bradd_root):
     assert not torch.allclose(stats["mean"].double(), everything.transpose(0, 1).reshape(2, -1).mean(1))
 
 
-def test_stats_cached_and_reused(bradd_root, tmp_path):
+def test_stats_cached_and_reused(bradd_root, tmp_path) -> None:
     """Stats are written to stats_path and an existing file is reused as is."""
     path = tmp_path / "stats.pt"
     BraDDDataset(bradd_root, "validation", stats_path=path)
@@ -38,7 +38,7 @@ def test_stats_cached_and_reused(bradd_root, tmp_path):
     assert torch.allclose(ds[0]["Images"][:, 1], raw[:, 1] - 2.0)
 
 
-def test_item_matches_upstream_day_convention(bradd_root):
+def test_item_matches_upstream_day_convention(bradd_root) -> None:
     """Day offsets start at 1 from the earliest image/label date, as upstream."""
     ds = BraDDDataset(bradd_root, "train", normalization="none")
     raw = ds.load_raw(3)
@@ -51,7 +51,7 @@ def test_item_matches_upstream_day_convention(bradd_root):
     assert item["Targets"].dtype == torch.long
 
 
-def test_zscore_output_and_bad_normalization(bradd_root):
+def test_zscore_output_and_bad_normalization(bradd_root) -> None:
     """Train items are ~zero-mean unit-std; unknown normalisation fails."""
     ds = BraDDDataset(bradd_root, "train")
     images = torch.cat([ds[i]["Images"] for i in range(len(ds))]).transpose(0, 1).reshape(2, -1)
@@ -60,7 +60,7 @@ def test_zscore_output_and_bad_normalization(bradd_root):
         BraDDDataset(bradd_root, "train", normalization="minmax")
 
 
-def test_max_samples_is_seeded_subset(bradd_root):
+def test_max_samples_is_seeded_subset(bradd_root) -> None:
     """max_samples gives a reproducible subset kept in meta order."""
     a = BraDDDataset(bradd_root, "train", normalization="none", max_samples=3, seed=5)
     b = BraDDDataset(bradd_root, "train", normalization="none", max_samples=3, seed=5)
@@ -68,7 +68,7 @@ def test_max_samples_is_seeded_subset(bradd_root):
     assert a.meta["file"].tolist() == sorted(a.meta["file"].tolist())
 
 
-def test_subsample_skipped_at_test_unless_flagged(bradd_root):
+def test_subsample_skipped_at_test_unless_flagged(bradd_root) -> None:
     """Subsampling applies to validation, not test, unless subsample_at_test."""
     spec = {"mode": "uniform", "num_dates": 5}
     val = BraDDDataset(bradd_root, "validation", normalization="none", temporal_subsample=spec)
@@ -79,7 +79,7 @@ def test_subsample_skipped_at_test_unless_flagged(bradd_root):
     assert test[0]["Images"].shape[0] == len(test.load_raw(0)["image_dates"])
 
 
-def test_collate_pads_end_and_masks(bradd_root):
+def test_collate_pads_end_and_masks(bradd_root) -> None:
     """Collation pads at the end with 0 and PadMask marks exactly the padding."""
     ds = BraDDDataset(bradd_root, "train", normalization="none")
     items = [ds[i] for i in range(4)]
@@ -93,7 +93,7 @@ def test_collate_pads_end_and_masks(bradd_root):
     assert batch["Index"].tolist() == [0, 1, 2, 3] and batch["PadMask"].dtype == torch.bool
 
 
-def test_build_dataloaders(bradd_root, tmp_path):
+def test_build_dataloaders(bradd_root, tmp_path) -> None:
     """build_dataloaders returns three loaders with the configured sizes and seeded order."""
     cfg = data_config("bradd", root=str(bradd_root), stats_path=str(tmp_path / "s.pt"), batch_size=3,
                       num_workers=0, temporal_subsample={"mode": "random", "num_dates": 6, "at_test": False},

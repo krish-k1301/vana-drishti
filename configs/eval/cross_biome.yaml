@@ -2,6 +2,11 @@
 # dated set (GEE export, Hansen labels, RADD dates). Used by src.cross_biome.
 base: early.yaml
 recall_reference: radd      # no DETER outside Brazil: recall at RADD date + offsets
+event_reference: hansen_year_end  # event_date of Phase 6 exports = 31 Dec of the Hansen loss year (1-year resolution),
+                                  # never a DETER date (gee/plan.py hansen_positives, gee/convert.py)
+deter_classes:              # stage mapping for Phase 6: positives carry deter_class = events.positive_class_label
+  _replace: true            # drop the DETER classes of early.yaml
+  hansen_loss: hansen_loss
 target_data:                # overrides of the run's (Amazon) data section; stats_path is NOT overridden, so the
                             # Amazon train-split normalisation is kept (weights and preprocessing unchanged)
   root: data/dated_congo    # Phase 6 GEE export in BraDD format (not yet produced); data/dated_borneo for Borneo

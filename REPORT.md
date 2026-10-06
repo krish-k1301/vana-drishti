@@ -10,7 +10,8 @@ Why nothing ran on real data: the container's network policy blocked zenodo.org 
 terrabrasilis.dpi.inpe.br (DETER, PRODES), huggingface.co (AnySat weights) and arxiv.org/CVF (paper checks). There
 was no GPU and there were no Earth Engine credentials.
 
-Test suite at the final commit: `OMP_NUM_THREADS=1 python -m pytest -q tests` (see the commit message for counts).
+Test suite at the final commit: `OMP_NUM_THREADS=1 python -m pytest -q tests` gives 260 passed, 0 xfailed (~45 s on CPU).
+pyflakes is clean; no file over 250 lines and no function over 50 lines (checked by `tests/test_review_code_rules.py`).
 
 ## 1. Phase status
 
@@ -95,6 +96,12 @@ plots `..._early_probability_vs_days.png`, `..._early_latency_hist.png`.
 Test false-alarm rate: 0.164 (DETER-anchored) and 0.180 (burn-anchored) per km² per month.
 
 ### 2.5 Phase 6: cross-biome transfer and label decomposition
+
+These two SMOKE outputs were produced before the final cleanup commit. Since then (a) the event-date reference in
+Phase 6 is named `hansen_year_end` instead of `deter` (the committed `cross_biome_early_latency.csv` still has an empty
+`deter` row), and (b) the synthetic `label_hansen` switches on at 31 Dec of the loss year instead of at the RADD date.
+Re-run `src.smoke_data` (synthetic_dated, then synthetic_target_biome) and the Phase 6 commands to refresh them. They
+were plumbing checks only either way.
 
 Transfer of the DETER-anchored Phase 4 model to a synthetic Hansen-labelled copy of the same scenes (not a
 different biome), tau reused from the Amazon run (`results/smoke/cross_biome_summary.json`,

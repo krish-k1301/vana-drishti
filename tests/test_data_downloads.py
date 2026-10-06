@@ -6,6 +6,7 @@ import io
 import json
 import threading
 import zipfile
+from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest import mock
 
@@ -30,7 +31,7 @@ PAYLOAD = _zip_bytes()
 def _handler(honour_range: bool, seen: list):
     class Handler(BaseHTTPRequestHandler):
         """Minimal GET handler with optional HTTP Range support."""
-        def do_GET(self):  # noqa: N802
+        def do_GET(self) -> None:  # noqa: N802
             """Serve PAYLOAD from the requested byte offset."""
             rng = self.headers.get("Range")
             seen.append(rng)
@@ -44,14 +45,14 @@ def _handler(honour_range: bool, seen: list):
             self.end_headers()
             self.wfile.write(PAYLOAD[start:])
 
-        def log_message(self, *args):
+        def log_message(self, *args) -> None:
             """Silence request logging."""
             return None
     return Handler
 
 
 @pytest.fixture(params=[True, False], ids=["range", "no-range"])
-def server(request):
+def server(request) -> Iterator[tuple[str, list, bool]]:
     """Local HTTP server serving PAYLOAD, with or without Range support."""
     seen: list = []
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), _handler(request.param, seen))
@@ -66,7 +67,7 @@ def _cfg(url, dest, md5, delete=False, min_free=0.0):
             "timeout_s": 10, "delete_zip_after_unzip": delete, "min_free_gb": min_free}
 
 
-def test_resume_from_partial_file(server, tmp_path):
+def test_resume_from_partial_file(server, tmp_path) -> None:
     """A partial .part file is resumed (or restarted) and the md5 covers the whole file."""
     url, seen, _ = server
     part = tmp_path / "b.zip.part"
@@ -76,7 +77,7 @@ def test_resume_from_partial_file(server, tmp_path):
     assert part.read_bytes() == PAYLOAD and digest == hashlib.md5(PAYLOAD).hexdigest()
 
 
-def test_complete_part_gets_416(server, tmp_path):
+def test_complete_part_gets_416(server, tmp_path) -> None:
     """A complete .part file is accepted when the server answers 416."""
     url = server[0]
     part = tmp_path / "b.zip.part"
@@ -84,7 +85,7 @@ def test_complete_part_gets_416(server, tmp_path):
     assert dl.download_resumable(requests.Session(), url, part, 512, 10) == hashlib.md5(PAYLOAD).hexdigest()
 
 
-def test_fetch_verify_unzip_and_delete(server, tmp_path):
+def test_fetch_verify_unzip_and_delete(server, tmp_path) -> None:
     """Full flow unzips and deletes the zip when free space is under the threshold."""
     url = server[0]
     dest = dl.fetch_verify_unzip(_cfg(url, tmp_path, hashlib.md5(PAYLOAD).hexdigest(), min_free=1e9),
@@ -92,14 +93,14 @@ def test_fetch_verify_unzip_and_delete(server, tmp_path):
     assert (dest / "BraDD" / "meta.csv").exists() and not (tmp_path / "b.zip").exists()
 
 
-def test_md5_mismatch_keeps_file(server, tmp_path):
+def test_md5_mismatch_keeps_file(server, tmp_path) -> None:
     """An md5 mismatch raises, keeps the download and does not unzip."""
     with pytest.raises(ValueError, match="md5 mismatch"):
         dl.fetch_verify_unzip(_cfg(server[0], tmp_path, "0" * 32), requests.Session())
     assert (tmp_path / "b.zip.part").exists() and not (tmp_path / "BraDD").exists()
 
 
-def test_unsafe_zip_rejected(tmp_path):
+def test_unsafe_zip_rejected(tmp_path) -> None:
     """Archive members escaping the destination are refused."""
     path = tmp_path / "evil.zip"
     with zipfile.ZipFile(path, "w") as archive:
@@ -123,7 +124,7 @@ def _fake_pages(sizes):
     return session
 
 
-def test_wfs_pagination_and_resume(tmp_path):
+def test_wfs_pagination_and_resume(tmp_path) -> None:
     """WFS pages advance startIndex by count, stop on a short page and are cached."""
     layer = {"type_name": "deter-amz:deter_amz", "sort_by": "gid", "cql_filter": "view_date >= '2020-01-01'"}
     session = _fake_pages([4, 4, 2])
@@ -137,7 +138,7 @@ def test_wfs_pagination_and_resume(tmp_path):
     assert tb.merge_pages(tmp_path / "p", tmp_path / "all.geojson") == 10
 
 
-def test_verify_deter_classes(tmp_path):
+def test_verify_deter_classes(tmp_path) -> None:
     """Class check reports found, missing and unexpected classname values."""
     session = _fake_pages([4])
     tb.fetch_wfs_pages(session, "http://wfs", {"type_name": "x"}, "2.0.0", "application/json", 10, 5, tmp_path)

@@ -2,8 +2,6 @@
 import ast
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[1]
 MAX_FILE_LINES = 250
 MAX_FUNC_LINES = 50
@@ -37,7 +35,6 @@ def test_library_code_follows_rules() -> None:
     assert _violations(("src", "gee", "scripts")) == []
 
 
-@pytest.mark.xfail(strict=True, reason="REVIEW: many public test functions lack a docstring and/or return hint")
 def test_test_code_follows_rules() -> None:
     """tests/ respects the same rules (every public function needs a docstring and a return hint)."""
     assert _violations(("tests",)) == []

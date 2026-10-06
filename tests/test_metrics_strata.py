@@ -26,24 +26,28 @@ def _three_blobs():
     return mask
 
 
-def test_bin_labels_default():
+def test_bin_labels_default() -> None:
+    """bin_labels names the size bins from their edges in hectares."""
     assert bin_labels((0.5, 2.0)) == ["<0.5 ha", "0.5-2 ha", ">2 ha"]
 
 
-def test_size_bins_components_and_map():
+def test_size_bins_components_and_map() -> None:
+    """size_bins assigns each connected component and its pixels to a size bin."""
     mask = _three_blobs()
     bin_map, table = size_bins(mask)
     assert sorted((r["n_pixels"], r["bin"]) for r in table) == [(9, 0), (100, 1), (225, 2)]
     assert bin_map[1, 1] == 0 and bin_map[15, 15] == 1 and bin_map[30, 30] == 2 and bin_map[5, 5] == -1
 
 
-def test_size_bins_eight_connectivity_and_pixel_area():
+def test_size_bins_eight_connectivity_and_pixel_area() -> None:
+    """Diagonal pixels form one 8-connected component whose area uses the pixel area."""
     mask = np.eye(5, dtype=np.uint8)  # diagonal touches -> one component under 8-connectivity
     _, table = size_bins(mask, pixel_area_ha=0.1, bins=(0.5, 2.0))
     assert len(table) == 1 and table[0]["area_ha"] == pytest.approx(0.5) and table[0]["bin"] == 1
 
 
-def test_size_bin_meter_pixels_and_component_recall():
+def test_size_bin_meter_pixels_and_component_recall() -> None:
+    """SizeBinMeter scores pixels and component recall per size bin."""
     ref = _three_blobs()
     pred = np.zeros_like(ref)
     pred[10:20, 10:15] = 1  # half of the 1 ha blob
@@ -62,7 +66,8 @@ def test_size_bin_meter_pixels_and_component_recall():
     assert strict.compute()["0.5-2 ha"]["n_detected"] == 0
 
 
-def test_edge_interior_square():
+def test_edge_interior_square() -> None:
+    """edge_interior splits a square into interior, edge ring and outer ring."""
     mask = np.zeros((12, 12), dtype=np.uint8)
     mask[2:10, 2:10] = 1  # 8x8 square: 2 px edge ring leaves a 4x4 interior
     region = edge_interior(mask, width_px=2, outer_ring=True)
@@ -71,13 +76,15 @@ def test_edge_interior_square():
     assert (region == 3).sum() == 144 - 64  # chessboard 2 px ring fills the rest of the 12x12 patch
 
 
-def test_edge_interior_patch_border_is_not_boundary():
+def test_edge_interior_patch_border_is_not_boundary() -> None:
+    """The patch border is not treated as a clearing boundary."""
     mask = np.ones((6, 6), dtype=np.uint8)
     region = edge_interior(mask, width_px=2)
     assert (region == 1).all()
 
 
-def test_edge_interior_meter_split():
+def test_edge_interior_meter_split() -> None:
+    """The edge/interior meter scores edge and interior pixels separately."""
     mask = np.zeros((12, 12), dtype=np.uint8)
     mask[2:10, 2:10] = 1
     region = edge_interior(mask, width_px=2)
@@ -89,6 +96,7 @@ def test_edge_interior_meter_split():
     assert out["edge"]["tp"] == 0 and out["edge"]["fn"] == 48
 
 
-def test_minimum_mapping_unit():
+def test_minimum_mapping_unit() -> None:
+    """minimum_mapping_unit states the MMU in hectares from pixel size and component size."""
     assert minimum_mapping_unit(10.0) == "MMU 0.01 ha (1 px of 10 m, 8-connected components)"
     assert minimum_mapping_unit(10.0, min_component_px=5).startswith("MMU 0.05 ha")

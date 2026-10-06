@@ -11,7 +11,7 @@ from scripts import inspect_bradd
 from src.data import compute_train_stats
 
 
-def test_inspection_report(bradd_root, tmp_path):
+def test_inspection_report(bradd_root, tmp_path) -> None:
     """The inspection script reports files, geolocation hits, dates and split counts."""
     top = tmp_path / "archive"
     shutil.copytree(bradd_root, top / "BraDD-S1TS")
@@ -38,7 +38,7 @@ def test_inspection_report(bradd_root, tmp_path):
     assert (bradd_root / "meta.csv").read_text() != (top / "BraDD-S1TS" / "meta.csv").read_text()
 
 
-def test_shipped_stats_compared(bradd_root, tmp_path):
+def test_shipped_stats_compared(bradd_root, tmp_path) -> None:
     """A shipped close_stats.pt is reported next to our train stats with per-channel differences."""
     top = tmp_path / "archive"
     shutil.copytree(bradd_root, top)

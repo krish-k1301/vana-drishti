@@ -14,7 +14,7 @@ DATED_COLUMNS = BASE_COLUMNS + ["event_date", "deter_class", "region_block", "da
                                  "gap_max_days", "modis_burn_flag"]
 
 
-def test_meta_columns_and_splits(bradd_root):
+def test_meta_columns_and_splits(bradd_root) -> None:
     """meta.csv has the seven BraDD columns, split counts and file names."""
     meta = pd.read_csv(bradd_root / "meta.csv", index_col=0)
     assert list(meta.columns) == BASE_COLUMNS
@@ -22,7 +22,7 @@ def test_meta_columns_and_splits(bradd_root):
     assert meta["file"].str.match(r"^\d{7}_\d{4}-\d{2}-\d{2}\.pt$").all()
 
 
-def test_sample_format(bradd_root):
+def test_sample_format(bradd_root) -> None:
     """Samples have BraDD keys, dtypes, shapes, dB-like values, variable T and no 1->1."""
     meta = read_meta(bradd_root)
     lengths = set()
@@ -40,7 +40,7 @@ def test_sample_format(bradd_root):
     assert len(lengths) > 1
 
 
-def test_transitions_present(bradd_root):
+def test_transitions_present(bradd_root) -> None:
     """Fixture labels contain 0->0 > 0->1 > 0, some 1->0 and no 1->1 pixels."""
     meta = read_meta(bradd_root)
     counts = torch.zeros(4, dtype=torch.long)
@@ -50,7 +50,7 @@ def test_transitions_present(bradd_root):
     assert counts[0] > counts[1] > 0 and counts[2] > 0 and counts[3] == 0
 
 
-def test_dated_format(dated_root):
+def test_dated_format(dated_root) -> None:
     """Dated fixture has extra columns, block-disjoint splits and cumulative monthly labels."""
     meta = pd.read_csv(dated_root / "meta.csv", index_col=0, keep_default_na=False)
     assert list(meta.columns) == DATED_COLUMNS
@@ -66,3 +66,19 @@ def test_dated_format(dated_root):
     assert s["label_hansen"].dtype == torch.int64 and s["label_hansen"].shape == s["label"].shape
     span = (s["image_dates"][-1] - s["image_dates"][0]).days
     assert 440 < span < 520
+
+
+def test_label_hansen_switches_on_at_loss_year_end(dated_root) -> None:
+    """Synthetic Hansen labels change only on the first label date on/after 31 Dec of a loss year (never RADD)."""
+    meta = pd.read_csv(dated_root / "meta.csv", index_col=0, keep_default_na=False)
+    changes = 0
+    for name in meta["file"]:
+        s = load_sample(dated_root / "Samples" / name)
+        hansen, dates = s["label_hansen"], s["label_dates"]
+        changes += int((hansen[-1] != hansen[0]).any())
+        assert (hansen[1:] >= hansen[:-1]).all(), "cumulative"
+        for k in range(1, len(dates)):
+            if (hansen[k] != hansen[k - 1]).any():
+                year_ends = [dt.date(y, 12, 31) for y in range(dates[k - 1].year, dates[k].year + 1)]
+                assert any(dates[k - 1] < end <= dates[k] for end in year_ends), (name, dates[k])
+    assert changes > 0, "fixture has no Hansen loss inside any window"

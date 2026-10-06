@@ -1,30 +1,20 @@
 """SMOKE tests for src.cross_biome (Phase 6 transfer) and src.label_decomposition."""
 import csv
 import json
-from collections.abc import Iterator
 from pathlib import Path
 
 import pandas as pd
 import pytest
-import torch
 
 from src import cross_biome, label_decomposition
 from src.config import load_config
 from src.data.stats import load_or_compute_stats
+from src.evaluation.early_records import references
 from src.smoke_data import make_target_biome
 from tests.test_eval_early import fixture_setup
 
 REPO = Path(__file__).resolve().parents[1]
 SHARED_FIXTURES = (fixture_setup,)  # module fixture "setup" from the early-eval tests
-
-
-@pytest.fixture(scope="module", autouse=True)
-def single_thread() -> Iterator[None]:
-    """Run this module's tiny CPU models on one thread (much faster than oversubscribed BLAS threads)."""
-    threads = torch.get_num_threads()
-    torch.set_num_threads(1)
-    yield
-    torch.set_num_threads(threads)
 
 
 def as_target_biome(source: Path, target: Path) -> Path:
@@ -62,10 +52,23 @@ def test_cross_biome_end_to_end(setup: tuple[dict, Path, dict], tmp_path: Path) 
     assert any(r["stratum_type"] == "size_bin" and r["f1"] for r in rows)
     latency = pd.read_csv(tmp_path / "out" / "early" / "latency.csv")
     overall = latency[(latency["level"] == "event") & (latency["stratum_type"] == "all")].set_index("reference")
-    assert overall.loc["deter", "n"] == 0 and overall.loc["burn", "n"] == 0 and overall.loc["radd", "n"] > 0
-    assert overall.loc["deter", "n_no_reference"] == overall.loc["radd", "n"]
+    assert set(latency["reference"]) == {"hansen_year_end", "burn", "radd"}
+    assert overall.loc["hansen_year_end", "n"] == 0 and overall.loc["burn", "n"] == 0 and overall.loc["radd", "n"] > 0
+    assert overall.loc["hansen_year_end", "n_no_reference"] == overall.loc["radd", "n"]
     recall = pd.read_csv(tmp_path / "out" / "early" / "recall.csv")
     assert set(recall["reference"]) == {"radd"}
+    events = pd.read_csv(tmp_path / "out" / "early" / "events.csv")
+    assert set(events["stage"]) == {"hansen_loss"} and not any("deter" in c for c in events.columns)
+    early_summary = json.loads((tmp_path / "out" / "early" / "summary.json").read_text())
+    assert early_summary["event_reference"] == "hansen_year_end"
+
+
+def test_phase6_config_never_names_deter() -> None:
+    """The shipped Phase 6 config names its event date hansen_year_end and maps only hansen_loss to a stage."""
+    eval_cfg = load_config(REPO / "configs" / "eval" / "cross_biome.yaml")
+    names = references(eval_cfg)
+    assert names[0] == "hansen_year_end" and "deter" not in names and eval_cfg["recall_reference"] == "radd"
+    assert eval_cfg["deter_classes"] == {"hansen_loss": "hansen_loss"}
 
 
 def test_cross_biome_requires_source_stats(setup: tuple[dict, Path, dict], tmp_path: Path) -> None:

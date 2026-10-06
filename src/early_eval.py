@@ -7,7 +7,8 @@
 2. Every test event: sliding-prefix inference at each cutoff t_c over the training label-day grid ending at
    t_c (no image after t_c is ever passed in), per-interval change probabilities combined into a cumulative
    per-pixel probability (`interval_combiner`), per-event curves, detection = first cutoff >= tau.
-3. Tables: latency vs DETER / burn / RADD, recall at `recall_reference` + offsets, split by DETER stage, size
+3. Tables: latency vs the event date (named by `event_reference`: `deter` on the Amazon set) / burn / RADD,
+   recall at `recall_reference` (one of those names) + offsets, split by DETER stage, size
    bin and edge vs interior; false alarms per km^2 per month on validation and test negatives.
 Outputs in `--out` (default `<run dir>/early_eval`): curves.csv, events.csv, latency.csv, recall.csv,
 false_alarms.csv, summary.json (SMOKE propagates from the run config).
@@ -109,7 +110,7 @@ def write_tables(out: Path, collector: EarlyCollector, alarms: list[dict], eval_
     events, pixels = collector.events(), collector.pixels()
     write_csv(out / "curves.csv", collector.curve_rows, header)
     write_csv(out / "events.csv", events.to_dict("records"), header)
-    write_csv(out / "latency.csv", latency_table(events, pixels), header)
+    write_csv(out / "latency.csv", latency_table(events, pixels, collector.references), header)
     write_csv(out / "recall.csv", recall_table(events, collector.event_curves, pixels,
                                                list(eval_cfg["recall_offsets_days"]), collector.tau,
                                                int(eval_cfg["persist_k"]), eval_cfg["recall_reference"]), header)
@@ -122,7 +123,8 @@ def settings(cfg: dict, data_cfg: dict, eval_cfg: dict) -> dict:
             "label_interval_days": data_cfg["prefix_truncation"]["label_interval_days"],
             "interval_combiner": eval_cfg["interval_combiner"],
             **{f"model_{k}": v for k, v in model_window(cfg).items()},
-            **{k: eval_cfg[k] for k in ("min_dates", "event_curve", "persist_k", "recall_reference")},
+            **{k: eval_cfg[k] for k in ("min_dates", "event_curve", "persist_k", "event_reference",
+                                        "recall_reference")},
             "mmu": minimum_mapping_unit(float(eval_cfg["pixel_size_m"]), int(eval_cfg["min_component_px"]))}
 
 

@@ -18,7 +18,8 @@ def acq(day: dt.date, orbit: int, orbit_pass: str = "DESCENDING", hour: int = 9)
     return Acquisition(ms(day, hour), orbit, orbit_pass, "A")
 
 
-def test_orbit_with_most_distinct_dates_wins_and_same_day_scenes_count_once():
+def test_orbit_with_most_distinct_dates_wins_and_same_day_scenes_count_once() -> None:
+    """The orbit with most distinct dates wins; same-day slices count once."""
     d = dt.date(2021, 1, 1)
     acqs = [acq(d, 10), acq(d, 10, hour=9), acq(d, 10, hour=9),  # three slices, same day, orbit 10
             acq(d + dt.timedelta(days=12), 10),
@@ -27,7 +28,8 @@ def test_orbit_with_most_distinct_dates_wins_and_same_day_scenes_count_once():
     assert orbit_dates(acqs, 10, "DESCENDING") == [d, d + dt.timedelta(days=12)]
 
 
-def test_orbit_tie_break_by_pass_then_lowest_orbit():
+def test_orbit_tie_break_by_pass_then_lowest_orbit() -> None:
+    """Orbit ties break by preferred pass, then by lowest orbit number, independent of order."""
     d = dt.date(2021, 1, 1)
     tied = [acq(d, 155, "ASCENDING"), acq(d, 39, "DESCENDING"), acq(d, 112, "DESCENDING")]
     assert select_orbit(tied, ["DESCENDING", "ASCENDING"]) == (39, "DESCENDING")
@@ -35,18 +37,21 @@ def test_orbit_tie_break_by_pass_then_lowest_orbit():
     assert select_orbit(list(reversed(tied)), ["DESCENDING", "ASCENDING"]) == (39, "DESCENDING")
 
 
-def test_select_orbit_empty_raises():
+def test_select_orbit_empty_raises() -> None:
+    """select_orbit with no acquisitions raises ValueError."""
     with pytest.raises(ValueError):
         select_orbit([], ["DESCENDING"])
 
 
-def test_parse_acquisitions_and_utc_date():
+def test_parse_acquisitions_and_utc_date() -> None:
+    """parse_acquisitions reads orbit and pass and dates scenes in UTC."""
     rows = [[ms(dt.date(2022, 5, 3), 23), 68, "ASCENDING", "A"]]
     parsed = parse_acquisitions(rows)
     assert parsed[0].orbit == 68 and parsed[0].date == dt.date(2022, 5, 3)
 
 
-def test_collection_filters_are_applied(monkeypatch):
+def test_collection_filters_are_applied(monkeypatch) -> None:
+    """s1_collection applies the instrument, resolution, platform and polarisation filters."""
     fake = MagicMock()
     monkeypatch.setattr(s1, "ee", fake)
     cfg = {"collection": "COPERNICUS/S1_GRD", "instrument_mode": "IW", "resolution_meters": 10,
@@ -62,7 +67,8 @@ def test_collection_filters_are_applied(monkeypatch):
     chain.filterDate.assert_called_once_with("2021-01-01", "2021-04-01")
 
 
-def test_stack_mosaics_one_image_per_date(monkeypatch):
+def test_stack_mosaics_one_image_per_date(monkeypatch) -> None:
+    """s1_stack builds one mosaic per acquisition date with a one-day filter."""
     fake = MagicMock()
     monkeypatch.setattr(s1, "ee", fake)
     collection = MagicMock()

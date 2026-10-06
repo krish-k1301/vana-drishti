@@ -16,7 +16,7 @@ def _positive_index(ds: DatedDataset) -> int:
     return int(ds.meta.index[ds.meta["deter_class"] != ""][0])
 
 
-def test_extra_keys_on_image_day_origin(dated_root):
+def test_extra_keys_on_image_day_origin(dated_root) -> None:
     """EventDay/RaddDay/EventMask are on the ImageDays origin."""
     ds = DatedDataset(dated_root, "train", normalization="none")
     i = _positive_index(ds)
@@ -30,7 +30,7 @@ def test_extra_keys_on_image_day_origin(dated_root):
     assert item["Targets"].shape[0] == len(raw["label_dates"]) > 2
 
 
-def test_negative_has_no_event(dated_root):
+def test_negative_has_no_event(dated_root) -> None:
     """Negatives carry EventDay -1, no burn and an empty event mask."""
     ds = DatedDataset(dated_root, "train", normalization="none")
     neg = int(ds.meta.index[ds.meta["deter_class"] == ""][0])
@@ -39,7 +39,7 @@ def test_negative_has_no_event(dated_root):
 
 
 @pytest.mark.parametrize("anchor", ["deter", "burn"])
-def test_prefix_at_semantics(dated_root, anchor):
+def test_prefix_at_semantics(dated_root, anchor) -> None:
     """No image after t_c, monotone labels, last label = pre OR event day <= t_c."""
     ds = DatedDataset(dated_root, "train", normalization="none")
     item = ds[_positive_index(ds)]
@@ -57,14 +57,14 @@ def test_prefix_at_semantics(dated_root, anchor):
         assert ((event_days >= 0) <= item["EventMask"].bool()).all()
 
 
-def test_label_days_spacing():
+def test_label_days_spacing() -> None:
     """Label days step back from t_c by the interval and stay >= 1."""
     trunc = PrefixTruncation("deter", 1, 30, seed=0)
     assert trunc.label_days(95).tolist() == [5, 35, 65, 95]
     assert trunc.label_days(20).tolist() == [1, 20]
 
 
-def test_random_cutoff_respects_min_dates(dated_root):
+def test_random_cutoff_respects_min_dates(dated_root) -> None:
     """Random cutoffs keep at least min_dates images and vary."""
     ds = DatedDataset(dated_root, "train", normalization="none",
                       prefix=PrefixTruncation("deter", min_dates=5, label_interval_days=30, seed=1))
@@ -72,7 +72,7 @@ def test_random_cutoff_respects_min_dates(dated_root):
     assert min(lengths) >= 5 and len(lengths) > 1
 
 
-def test_dated_loader_collates_variable_labels(dated_root, tmp_path):
+def test_dated_loader_collates_variable_labels(dated_root, tmp_path) -> None:
     """Dated loader pads variable label counts; last label day = last image day."""
     cfg = data_config("dated_amazon", root=str(dated_root), stats_path=str(tmp_path / "d.pt"), batch_size=4,
                       num_workers=0, seed=0)
@@ -85,7 +85,7 @@ def test_dated_loader_collates_variable_labels(dated_root, tmp_path):
         assert batch["TargetDays"][b][valid].max() == last_image_day
 
 
-def test_collate_pads_label_axis():
+def test_collate_pads_label_axis() -> None:
     """Targets/TargetDays are end-padded with 0 along the label axis."""
     items = [{"ImageDays": torch.arange(1, n + 1), "TargetDays": torch.arange(1, t + 1),
               "Targets": torch.ones(t, 2, 2, dtype=torch.long)} for n, t in ((3, 2), (5, 4))]
@@ -94,7 +94,7 @@ def test_collate_pads_label_axis():
     assert batch["Targets"][0, 2:].sum() == 0 and batch["PadMask"].tolist()[0] == [False] * 3 + [True] * 2
 
 
-def test_ref_day_reproduces_stored_labels(dated_root):
+def test_ref_day_reproduces_stored_labels(dated_root) -> None:
     """Deter-anchored labels rebuilt at a stored label day equal the stored mask, neighbour polygons included."""
     ds = DatedDataset(dated_root, "train", normalization="none")
     trunc = PrefixTruncation("deter", min_dates=1, label_interval_days=30, seed=0)
@@ -107,7 +107,7 @@ def test_ref_day_reproduces_stored_labels(dated_root):
             assert torch.equal(cut["Targets"][-1], item["Targets"][k])
 
 
-def test_burn_day_is_a_month_end(dated_root):
+def test_burn_day_is_a_month_end(dated_root) -> None:
     """Burn months are encoded as their last day, so BurnDay never precedes the end of the burn month."""
     ds = DatedDataset(dated_root, "train", normalization="none")
     for i in range(len(ds)):
@@ -117,7 +117,7 @@ def test_burn_day_is_a_month_end(dated_root):
             assert (day + dt.timedelta(days=1)).day == 1
 
 
-def test_derived_ref_day_without_key(dated_root):
+def test_derived_ref_day_without_key(dated_root) -> None:
     """Without `ref_day` the dataset derives RefDay from EventDay/EventMask and the stored label onsets."""
     ds = DatedDataset(dated_root, "train", normalization="none")
     item = ds[0]

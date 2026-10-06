@@ -30,7 +30,7 @@ def _with_target_region(src, dst, phases=("test",), split=None):
     return dst
 
 
-def test_region_stats_come_from_train_rows(bradd_root, tmp_path):
+def test_region_stats_come_from_train_rows(bradd_root, tmp_path) -> None:
     """Each seen region is normalised with the stats of its own train rows."""
     meta = read_meta(bradd_root)
     train = meta[meta["close_set"] == "train"]
@@ -45,7 +45,7 @@ def test_region_stats_come_from_train_rows(bradd_root, tmp_path):
 
 
 @pytest.mark.parametrize("policy", ["global", "self", "error"])
-def test_unseen_region_policies(bradd_root, tmp_path, policy):
+def test_unseen_region_policies(bradd_root, tmp_path, policy) -> None:
     """A test-only region gets global train stats, its own images' stats, or an error."""
     root = _with_target_region(bradd_root, tmp_path / "ds")
     spec = _spec(tmp_path / "r.pt", unseen=policy)
@@ -61,7 +61,7 @@ def test_unseen_region_policies(bradd_root, tmp_path, policy):
     assert ds.region_norm.sources["congo"] == policy
 
 
-def test_forced_self_normalisation_and_cache(bradd_root, tmp_path):
+def test_forced_self_normalisation_and_cache(bradd_root, tmp_path) -> None:
     """Listed regions always self-normalise; the cache is reused and checked for its region column."""
     region = read_meta(bradd_root).query("close_set == 'train'")["state"].iloc[0]
     ds = BraDDDataset(bradd_root, "train", per_region_norm=_spec(tmp_path / "r.pt", forced=[region]))
@@ -70,7 +70,7 @@ def test_forced_self_normalisation_and_cache(bradd_root, tmp_path):
         BraDDDataset(bradd_root, "train", per_region_norm=_spec(tmp_path / "r.pt", column="sampling_type"))
 
 
-def test_target_root_reuses_training_cache(bradd_root, tmp_path):
+def test_target_root_reuses_training_cache(bradd_root, tmp_path) -> None:
     """A cross-biome set with no train rows normalises with the Amazon cache plus its own images."""
     cache = tmp_path / "amazon.pt"
     BraDDDataset(bradd_root, "train", per_region_norm=_spec(cache))
@@ -81,7 +81,7 @@ def test_target_root_reuses_training_cache(bradd_root, tmp_path):
         BraDDDataset(target, "test", per_region_norm=_spec(tmp_path / "missing.pt"))
 
 
-def test_region_norm_config_errors(bradd_root, tmp_path):
+def test_region_norm_config_errors(bradd_root, tmp_path) -> None:
     """Incomplete blocks, bad policies and normalization 'none' are rejected."""
     with pytest.raises(KeyError):
         BraDDDataset(bradd_root, "train", per_region_norm={"enabled": True, "region_column": "state"})

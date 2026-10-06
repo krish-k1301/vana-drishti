@@ -6,7 +6,6 @@ from typing import Sequence
 import numpy as np
 import pandas as pd
 
-from src.evaluation.early_records import REFERENCES
 from src.metrics.latency import latency_summary, recall_at_offsets, recall_from_detection_days
 
 EVENT_STRATA = ("all", "stage", "size_bin")
@@ -22,13 +21,13 @@ def groups(frame: pd.DataFrame, strata: Sequence[str]) -> list[tuple[str, str, p
     return out
 
 
-def latency_table(events: pd.DataFrame, pixels: pd.DataFrame) -> list[dict]:
+def latency_table(events: pd.DataFrame, pixels: pd.DataFrame, references: Sequence[str]) -> list[dict]:
     """Latency summaries (days; missed counted, no-reference excluded) for every reference, level and stratum."""
     rows = []
     for level, frame, strata in (("event", events, EVENT_STRATA), ("pixel", pixels, PIXEL_STRATA)):
         if frame.empty:
             continue
-        for reference in REFERENCES:
+        for reference in references:
             for kind, stratum, part in groups(frame, strata):
                 summary = latency_summary(part["detection_day"].to_numpy(), part[f"ref_{reference}"].to_numpy())
                 rows.append({"reference": reference, "level": level, "stratum_type": kind, "stratum": stratum,

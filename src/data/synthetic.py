@@ -3,8 +3,10 @@
 Used by the tests (tests/fixtures.py re-exports it) and by `src.smoke_data`. The module constants below are
 the generator's design (dB levels, window lengths, class weights from the upstream notebook), not experiment
 hyperparameters. Dated samples follow the GEE pipeline contract: cumulative monthly labels from every
-DETER polygon in the patch, `ref_day` = per-pixel DETER date (days since 1970-01-01, -1 none) and
-`burn_month` = LAST day of the first burn month (causal-safe encoding).
+DETER polygon in the patch, `ref_day` = per-pixel DETER date (days since 1970-01-01, -1 none),
+`burn_month` = LAST day of the first burn month (causal-safe encoding) and `label_hansen` = cumulative Hansen-style
+masks that switch on at 31 Dec of the synthetic loss year (the calendar year of each clearing; mask dilated by one
+pixel), as gee/to_bradd.py::hansen_reference dates real Hansen loss (never dated by RADD).
 """
 from __future__ import annotations
 
@@ -137,6 +139,11 @@ def _cumulative(pre: np.ndarray, polygons: list[tuple[np.ndarray, int]], label_o
                      for d in label_offs]).astype(np.int64)
 
 
+def _hansen_offset(start: dt.date, cleared: dt.date) -> int:
+    """Window offset of 31 Dec of the synthetic Hansen loss year (= calendar year of the clearing date)."""
+    return (dt.date(cleared.year, 12, 31) - start).days
+
+
 def _dated_record(rng: np.random.Generator, aux: np.random.Generator, sampling_type: str, event: dt.date,
                   deter_class: str | None, block: str) -> dict:
     """One dated sample: ~12 months before to ~4 months after the event, monthly cumulative labels."""
@@ -151,7 +158,6 @@ def _dated_record(rng: np.random.Generator, aux: np.random.Generator, sampling_t
     polygons = [(mask, event_off), (other, other_off)]
     base = OPEN_DB if sampling_type in ("oldDeforest", "herbaceous") else FOREST_DB
     radd = event + dt.timedelta(days=int(rng.integers(5, 40)))
-    radd_off = (radd - start).days
     image = _images(rng, offsets, base, mask, event_off, np.zeros_like(mask))
     image -= torch.tensor(CLEARING_DROP_DB).view(1, 2, 1, 1) * torch.from_numpy(
         (offsets >= other_off)[:, None, None] & other[None]).unsqueeze(1).float()
@@ -162,8 +168,8 @@ def _dated_record(rng: np.random.Generator, aux: np.random.Generator, sampling_t
         "label_dates": [start + dt.timedelta(days=int(o)) for o in label_offs],
         "image": image,
         "label": torch.from_numpy(_cumulative(pre, polygons, label_offs)),
-        "label_hansen": torch.from_numpy(_cumulative(pre, [(_dilate(mask), radd_off), (other, other_off)],
-                                                     label_offs)),
+        "label_hansen": torch.from_numpy(_cumulative(pre, [(_dilate(mask), _hansen_offset(start, event)),
+                                                           (other, _hansen_offset(start, other_day))], label_offs)),
         "ref_day": torch.from_numpy(ref_day.astype(np.int32)),
         "event_date": event if deter_class else None,
         "deter_class": deter_class or "",

@@ -36,12 +36,14 @@ def row(sampling_type: str = "positive", orbit: object = 10, gap: float = 12.0) 
     return pd.Series({"sampling_type": sampling_type, "relative_orbit": orbit, "gap_max_days": gap})
 
 
-def test_good_samples_pass_every_check():
+def test_good_samples_pass_every_check() -> None:
+    """Well-formed positive and negative samples pass every QA check."""
     assert all(check_sample(good_sample(), row(), QA).values())
     assert all(check_sample(good_sample(False), row("forest"), QA).values())
 
 
-def test_bad_inputs_are_caught():
+def test_bad_inputs_are_caught() -> None:
+    """NaNs, linear-scale values, out-of-range dB and other defects fail their QA checks."""
     nan = good_sample()
     nan["image"][0, 0, 0, 0] = float("nan")
     assert not check_sample(nan, row(), QA)["finite"]
@@ -78,7 +80,8 @@ def write_dataset(root, samples: list[tuple[dict, str]]) -> None:
     write_meta(str(root), rows)
 
 
-def test_run_qa_report_and_pilot_gate(tmp_path):
+def test_run_qa_report_and_pilot_gate(tmp_path) -> None:
+    """run_qa on a good dataset passes and writes the report, spot sample and pilot gate."""
     cfg_qa = {**QA, "min_positives": 2}
     write_dataset(tmp_path, [(good_sample(), "positive")] * 3 + [(good_sample(False), "forest")])
     table = run_qa(str(tmp_path), cfg_qa)
@@ -94,7 +97,8 @@ def test_run_qa_report_and_pilot_gate(tmp_path):
     assert not pilot_passed(str(tmp_path / "nothing"), "abc")[0]
 
 
-def test_failed_pilot_blocks_full_run(tmp_path):
+def test_failed_pilot_blocks_full_run(tmp_path) -> None:
+    """A pilot with failing samples is recorded as not passed and blocks the full run."""
     bad = good_sample()
     bad["image"] = torch.full_like(bad["image"], float("nan"))
     write_dataset(tmp_path, [(bad, "positive")])

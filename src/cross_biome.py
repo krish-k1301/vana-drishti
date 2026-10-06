@@ -5,8 +5,9 @@
 
 1. Segmentation on the target test split against its stored (Hansen) labels: pixel/patch IoU/F1 and IoU/F1 per
    size bin, edge/interior (`segmentation.json`, `segmentation.csv`).
-2. Early detection with the Phase 5 machinery (`early/`): latency vs RADD (DETER and burn are absent, so they
-   are reported as no-reference), recall at RADD + offsets, false alarms on target negatives.
+2. Early detection with the Phase 5 machinery (`early/`): latency vs RADD and vs the event date, which is
+   named `hansen_year_end` (eval-config `event_reference`; 31 Dec of the Hansen loss year, never DETER); burn is
+   absent (reported as no-reference); recall at RADD + offsets; false alarms on target negatives.
    tau comes from the Amazon early evaluation (`--tau-from`, fully unchanged transfer) or, without it, from the
    target's validation negatives at the configured budget (recorded as `tau_source`).
 Normalisation keeps the run's Amazon stats file; it must exist. SMOKE propagates from the run config.

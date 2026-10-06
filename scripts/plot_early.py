@@ -20,9 +20,6 @@ import pandas as pd  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.config import load_config  # noqa: E402
 
-REFERENCES = ("deter", "burn", "radd")
-
-
 def prefix_title(summary: dict, text: str) -> str:
     """Title with the run label (SMOKE) and the MMU in front of `text`."""
     label = f"{summary['label']} " if summary.get("label") else ""
@@ -30,7 +27,7 @@ def prefix_title(summary: dict, text: str) -> str:
 
 
 def plot_curves(curves: pd.DataFrame, summary: dict, bin_width: float, out: Path) -> Path:
-    """Event-mean probability vs days since the DETER date: thin line per event, binned median per stage."""
+    """Event-mean probability vs days since the event date (`event_reference`): line per event, median per stage."""
     fig, ax = plt.subplots(figsize=(7.0, 4.0))
     for i, (stage, part) in enumerate(curves.groupby("stage", sort=True)):
         color = f"C{i}"
@@ -41,16 +38,18 @@ def plot_curves(curves: pd.DataFrame, summary: dict, bin_width: float, out: Path
         ax.plot(median.index, median.values, color=color, linewidth=2.0, label=f"{stage} (n={part['index'].nunique()})")
     ax.axvline(0, color="black", linestyle=":", linewidth=1)
     ax.axhline(summary["tau"], color="grey", linestyle="--", linewidth=1, label=f"tau={summary['tau']:.3g}")
-    ax.set(xlabel="days since DETER date (cutoff - event)", ylabel="mean change probability in event mask")
+    ax.set(xlabel=f"days since {summary['event_reference']} date (cutoff - event)",
+           ylabel="mean change probability in event mask")
     ax.set_title(prefix_title(summary, "Probability vs days since event"), fontsize=9)
     ax.legend(fontsize=7)
     return save(fig, out / "early_probability_vs_days.png")
 
 
 def plot_latency(events: pd.DataFrame, summary: dict, n_bins: int, out: Path) -> Path:
-    """One latency histogram per reference; the title states the missed and no-reference counts."""
-    fig, axes = plt.subplots(1, len(REFERENCES), figsize=(4.0 * len(REFERENCES), 3.5))
-    for ax, ref in zip(axes, REFERENCES):
+    """One latency histogram per reference (`ref_*` columns); the title states the missed and no-reference counts."""
+    references = [column[len("ref_"):] for column in events.columns if column.startswith("ref_")]
+    fig, axes = plt.subplots(1, len(references), figsize=(4.0 * len(references), 3.5))
+    for ax, ref in zip(axes, references):
         has_ref = events[f"ref_{ref}"].notna()
         latency = events.loc[has_ref, f"latency_{ref}"].dropna()
         if len(latency):

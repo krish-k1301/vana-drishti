@@ -14,14 +14,14 @@ def _crop(size, mode):
     return {"enabled": True, "size": size, "mode": mode, "input_size": 48}
 
 
-def test_tile_starts():
+def test_tile_starts() -> None:
     """48 splits into 3 disjoint 16-px tiles per axis and 2 overlapping 32-px tiles per axis."""
     assert tile_starts(48, 16) == [0, 16, 32] and tile_starts(48, 32) == [0, 16]
     assert tile_starts(48, 48) == [0] and tile_starts(48, 24) == [0, 24]
 
 
 @pytest.mark.parametrize("size,n_tiles", [(16, 9), (32, 4)])
-def test_tiles_cover_the_patch_consistently(dated_root, size, n_tiles):
+def test_tiles_cover_the_patch_consistently(dated_root, size, n_tiles) -> None:
     """Every spatial key of every tile equals the same window of the full item; tiles cover all pixels."""
     full = DatedDataset(dated_root, "train", normalization="none")
     tiled = DatedDataset(dated_root, "train", normalization="none", crop=_crop(size, "tile"))
@@ -38,7 +38,7 @@ def test_tiles_cover_the_patch_consistently(dated_root, size, n_tiles):
     assert covered.all() and tiled[n_tiles]["Index"].item() == 1
 
 
-def test_random_crop_train_only_and_seeded(bradd_root):
+def test_random_crop_train_only_and_seeded(bradd_root) -> None:
     """Random crops vary and are reproducible in train; other phases use the center crop."""
     a = BraDDDataset(bradd_root, "train", normalization="none", crop=_crop(32, "random"), seed=3)
     b = BraDDDataset(bradd_root, "train", normalization="none", crop=_crop(32, "random"), seed=3)
@@ -50,7 +50,7 @@ def test_random_crop_train_only_and_seeded(bradd_root):
     assert item["Targets"].shape[-2:] == (32, 32)
 
 
-def test_crop_config_errors(bradd_root):
+def test_crop_config_errors(bradd_root) -> None:
     """Bad modes, sizes and incomplete blocks are rejected."""
     with pytest.raises(ValueError):
         BraDDDataset(bradd_root, "train", normalization="none", crop=_crop(64, "center"))
@@ -60,7 +60,7 @@ def test_crop_config_errors(bradd_root):
         BraDDDataset(bradd_root, "train", normalization="none", crop={"enabled": True, "size": 16})
 
 
-def test_label_source_switch(dated_root, bradd_root):
+def test_label_source_switch(dated_root, bradd_root) -> None:
     """'hansen' reads label_hansen, 'prodes' reads label; missing stacks and prefix mixing fail."""
     prodes = DatedDataset(dated_root, "train", normalization="none")
     hansen = DatedDataset(dated_root, "train", normalization="none", label_source="hansen")
@@ -78,7 +78,7 @@ def test_label_source_switch(dated_root, bradd_root):
         DatedDataset(dated_root, "train", normalization="none", label_source="landsat")
 
 
-def test_loader_per_phase_label_source_and_crop(dated_root):
+def test_loader_per_phase_label_source_and_crop(dated_root) -> None:
     """Label decomposition config: Hansen in train, PRODES in test; crops flow through collation."""
     cfg = data_config("dated_amazon", root=str(dated_root), normalization="none", batch_size=4, num_workers=0,
                       seed=0, crop=_crop(16, "tile"), prefix_truncation=None,

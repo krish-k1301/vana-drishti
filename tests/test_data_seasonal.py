@@ -15,7 +15,7 @@ def _window(start, end, on_empty="error"):
     return {"enabled": True, "start": start, "end": end, "on_empty": on_empty}
 
 
-def test_calendar_window_with_year_wrap():
+def test_calendar_window_with_year_wrap() -> None:
     """A window starting after it ends wraps the year end; bounds are inclusive."""
     wrap = SeasonalWindow("11-01", "03-31", "error")
     assert wrap.contains(dt.date(2020, 12, 15)) and wrap.contains(dt.date(2020, 2, 29))
@@ -28,7 +28,7 @@ def test_calendar_window_with_year_wrap():
         SeasonalWindow("01-01", "03-01", "drop")
 
 
-def test_images_filtered_labels_intact(bradd_root):
+def test_images_filtered_labels_intact(bradd_root) -> None:
     """Only in-window images remain; label masks and label dates are untouched."""
     ds = BraDDDataset(bradd_root, "train", normalization="none", seasonal_window=_window("06-01", "09-30"))
     plain = BraDDDataset(bradd_root, "train", normalization="none")
@@ -42,7 +42,7 @@ def test_images_filtered_labels_intact(bradd_root):
         assert item["TargetDays"].tolist() == [(d - origin).days + 1 for d in full["label_dates"]]
 
 
-def test_skip_and_error_policies(bradd_root):
+def test_skip_and_error_policies(bradd_root) -> None:
     """'skip' drops samples with no in-window image at build time; 'error' raises when such a sample is read."""
     plain = BraDDDataset(bradd_root, "train", normalization="none")
     day = plain.load_raw(0)["image_dates"][1]
@@ -59,7 +59,7 @@ def test_skip_and_error_policies(bradd_root):
             error[has_day.index(False)]
 
 
-def test_window_applied_before_subsample(bradd_root):
+def test_window_applied_before_subsample(bradd_root) -> None:
     """The temporal subsample picks among the in-window dates only."""
     spec = _window("06-01", "09-30")
     ds = BraDDDataset(bradd_root, "train", normalization="none", seasonal_window=spec,
@@ -72,7 +72,7 @@ def test_window_applied_before_subsample(bradd_root):
     assert days[0] == in_window[0] and days[-1] == in_window[-1]
 
 
-def test_missing_keys_rejected(bradd_root):
+def test_missing_keys_rejected(bradd_root) -> None:
     """An enabled block must spell out every key."""
     with pytest.raises(KeyError):
         BraDDDataset(bradd_root, "train", normalization="none", seasonal_window={"enabled": True, "start": "01-01"})

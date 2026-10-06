@@ -54,14 +54,16 @@ def hansen_bands() -> dict:
     return {HANSEN_LOSS: loss, RADD_ALERT: alert, RADD_DATE: date, MODIS_BURN: np.zeros((48, 48))}
 
 
-def test_cumulative_labels_include_prior_and_dated_pixels():
+def test_cumulative_labels_include_prior_and_dated_pixels() -> None:
+    """Cumulative labels are the prior mask OR pixels dated on or before each label date."""
     ref = np.array([[-1, to_days(dt.date(2022, 3, 5))]], dtype=np.int32)
     prior = np.array([[True, False]])
     label = cumulative_labels(ref, prior, [dt.date(2022, 3, 1), dt.date(2022, 4, 1)])
     assert label.dtype == np.int64 and label.tolist() == [[[1, 0]], [[1, 1]]]
 
 
-def test_hansen_positive_is_dated_at_year_end_and_ignores_radd(tmp_path):
+def test_hansen_positive_is_dated_at_year_end_and_ignores_radd(tmp_path) -> None:
+    """A Hansen positive is dated at 31 Dec of its loss year, never by RADD, in BraDD format."""
     cfg = load_config("configs/gee/congo_pilot.yaml")
     spec = make_spec("positive", 25.3, 0.9, HANSEN_EVENT)
     result = convert_patch(cfg, spec, {**s1_bands(40, nodata_date=5), **hansen_bands()},
@@ -87,7 +89,8 @@ def test_hansen_positive_is_dated_at_year_end_and_ignores_radd(tmp_path):
     assert row["n_dates"] == 39 and row["dated_set"] == row["close_set"] == "train"
 
 
-def test_hansen_negative_with_change_is_rejected_and_clean_negative_kept():
+def test_hansen_negative_with_change_is_rejected_and_clean_negative_kept() -> None:
+    """Hansen negatives with loss in the window are rejected; clean ones are kept undated."""
     cfg = load_config("configs/gee/congo_pilot.yaml")
     changing = make_spec("forest", 25.3, 0.9, dt.date(2023, 3, 1))
     assert convert_patch(cfg, changing, {**s1_bands(10), **hansen_bands()}, info_for(10), Vectors(None, None)) == \
@@ -115,7 +118,8 @@ def deter_inputs(tmp_path, cfg: dict, spec: PatchSpec) -> tuple:
     return central, neighbour
 
 
-def test_deter_path_ref_day_neighbours_label_hansen_and_dated_loader(tmp_path):
+def test_deter_path_ref_day_neighbours_label_hansen_and_dated_loader(tmp_path) -> None:
+    """The DETER path dates neighbour polygons, builds label_hansen and loads in DatedDataset."""
     cfg = load_config("configs/gee/amazon_dated.yaml")
     spec = make_spec("positive", -55.4, -7.0)
     central, _ = deter_inputs(tmp_path, cfg, spec)

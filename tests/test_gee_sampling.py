@@ -12,7 +12,8 @@ from gee.sampling import (allocate_negatives, assign_block, block_index, parse_s
 FRACTIONS = {"train": 0.7, "validation": 0.15, "test": 0.15}
 
 
-def test_grid_is_snapped_48x48_utm():
+def test_grid_is_snapped_48x48_utm() -> None:
+    """make_grid snaps a 48x48 10 m patch to the UTM zone grid."""
     grid = make_grid(-55.4, -7.05, 48, 10.0)
     assert grid.epsg == utm_epsg(-55.4, -7.05) == 32721
     assert grid.x0 % 10 == 0 and grid.y0 % 10 == 0
@@ -21,7 +22,8 @@ def test_grid_is_snapped_48x48_utm():
     assert grid.compute_pixels_grid()["affineTransform"]["scaleY"] == -10.0
 
 
-def test_rasterize_and_rowcol_agree():
+def test_rasterize_and_rowcol_agree() -> None:
+    """rasterize and lonlat_to_rowcol agree on the patch grid; no geometry gives an empty mask."""
     grid = make_grid(25.3, 0.9, 48, 10.0)
     lon0, lat0, lon1, lat1 = lonlat_bounds(grid)
     half = box(lon0 - 1, lat0 - 1, (lon0 + lon1) / 2, lat1 + 1)
@@ -33,12 +35,14 @@ def test_rasterize_and_rowcol_agree():
     assert not rasterize([], grid).any()
 
 
-def test_area_ha_of_one_km_square_near_equator():
+def test_area_ha_of_one_km_square_near_equator() -> None:
+    """area_ha of a 1 km square near the equator is about 100 ha."""
     square = box(25.0, 0.0, 25.0 + 1000 / 111_320, 1000 / 110_574)
     assert abs(area_ha(square) - 100.0) < 2.0
 
 
-def test_block_split_is_deterministic_and_roughly_proportional():
+def test_block_split_is_deterministic_and_roughly_proportional() -> None:
+    """Block splits are seed-deterministic and roughly follow the configured fractions."""
     blocks = [(ix, iy) for ix in range(-200, -150) for iy in range(-40, 0)]
     first = [split_of_block(b, 42, FRACTIONS) for b in blocks]
     assert first == [split_of_block(b, 42, FRACTIONS) for b in blocks]
@@ -48,7 +52,8 @@ def test_block_split_is_deterministic_and_roughly_proportional():
     assert first != [split_of_block(b, 7, FRACTIONS) for b in blocks]
 
 
-def test_patches_crossing_block_edge_are_dropped_and_splits_never_share_pixels():
+def test_patches_crossing_block_edge_are_dropped_and_splits_never_share_pixels() -> None:
+    """Patches crossing a block edge are dropped, so different splits never overlap."""
     rng = np.random.default_rng(0)
     kept = []
     for lon, lat in zip(rng.uniform(-56, -55, 400), rng.uniform(-7.5, -6.5, 400)):
@@ -65,14 +70,16 @@ def test_patches_crossing_block_edge_are_dropped_and_splits_never_share_pixels()
                 assert not geom_a.intersects(geom_b)
 
 
-def test_thin_by_distance_keeps_spaced_points_in_order():
+def test_thin_by_distance_keeps_spaced_points_in_order() -> None:
+    """thin_by_distance keeps the first of points closer than the minimum distance."""
     lons = [0.0, 0.001, 0.01, 0.0105]
     lats = [0.0, 0.0, 0.0, 0.0]
     assert thin_by_distance(lons, lats, 240.0) == [0, 2]
     assert thin_by_distance(lons, lats, 0.0) == [0, 1, 2, 3]
 
 
-def test_negative_dates_follow_positive_distribution():
+def test_negative_dates_follow_positive_distribution() -> None:
+    """Negative dates are drawn from the positive date distribution, deterministically per seed."""
     positives = [dt.date(2021, 7, 1)] * 90 + [dt.date(2022, 2, 1)] * 10
     dates = sample_negative_dates(positives, 2000, seed=3)
     share = sum(d == dt.date(2021, 7, 1) for d in dates) / len(dates)
@@ -80,14 +87,16 @@ def test_negative_dates_follow_positive_distribution():
     assert dates == sample_negative_dates(positives, 2000, seed=3)
 
 
-def test_allocate_negatives_matches_total_and_weights():
+def test_allocate_negatives_matches_total_and_weights() -> None:
+    """allocate_negatives matches the requested total and orders classes by weight."""
     counts = allocate_negatives(100, 1.72, {"oldDeforest": 7557, "forest": 5472, "herbaceous": 1780,
                                             "agriculture": 152, "shrubs": 21})
     assert sum(counts.values()) == 172
     assert counts["oldDeforest"] > counts["forest"] > counts["herbaceous"] >= counts["agriculture"]
 
 
-def test_parse_sample_points():
+def test_parse_sample_points() -> None:
+    """parse_sample_points reads lon, lat, class code and the extra property."""
     props = {"cls": 99, "radd_date": 21050}
     info = {"features": [{"geometry": Point(25.1, 0.7).__geo_interface__, "properties": props}]}
     assert parse_sample_points(info, "cls", "radd_date") == [{"lon": 25.1, "lat": 0.7, "code": 99, "extra": 21050}]
