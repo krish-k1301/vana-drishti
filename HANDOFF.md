@@ -64,7 +64,7 @@ Notes on the environment:
 | 3 Dated Amazon dataset | PARTIAL (no EE creds) | Full GEE pipeline in `gee/`, tested with mocked `ee`; CLI exits 2 "BLOCKED: no Earth Engine credentials". DETER/PRODES download script written, never reached the server. |
 | 4 Prefix-truncation training | PARTIAL (SMOKE done, no dated data) | `src/data/prefix.py` (fixed after review), `configs/early/utae_prefix_{deter,burn}.yaml`. SMOKE runs on the fixed code done: `results/smoke/smoke_early_{deter,burn}_metrics_test.csv`. On the dated set the `label[0] OR pred` rule inflates IoU (cumulative labels keep 1→1 pixels): 0.92 with OR vs ~0.00 without after 2 epochs. **Report the without-OR numbers for Phases 4–6.** Checkpoints are in gitignored `results/runs/smoke_early_*/checkpoints/` (regenerate if missing: `python -m src.train --config configs/smoke/early_deter.yaml`, ~9 min on 4 CPU cores). |
 | 5 Early-detection eval | PARTIAL (SMOKE done, no dated data) | SMOKE early_eval on both Phase 4 checkpoints: `results/smoke/early_{deter,burn}_*` (summary, latency, recall, false alarms, plots). The 2-epoch SMOKE model detects 0/33 events (pipeline check only). Note: with noisy-OR over ~14 monthly intervals the validation-chosen tau was ~0.9999 — noisy-OR saturates on long windows; compare `interval_combiner: max` on real data. | `src/early_eval.py` (sliding prefix, noisy-OR over 30-day intervals, tau on validation at a false-alarm budget, latency vs DETER/burn/RADD, recall at +0/12/24/48/90 d, splits by stage/size/edge), `scripts/plot_early.py`. |
-| 6 Cross-biome | CODE DONE, no runs | `src/cross_biome.py`, `src/label_decomposition.py`, GEE configs for Congo/Borneo pilots, per-region norm / crop / label-source switches in `src/data/`. |
+| 6 Cross-biome | PARTIAL (SMOKE done, no EE data) | SMOKE cross-biome transfer on a synthetic Hansen-labelled copy (`results/smoke/cross_biome_*`) and SMOKE label decomposition (`results/smoke/label_decomposition_smoke.csv`; penalty negative = SMOKE artifact, synthetic Hansen masks are dilated DETER masks). Open: on real Phase 6 exports `event_date` = Hansen year-end and early_eval reports it under the name `deter` — rename that reference (cleanup item). | `src/cross_biome.py`, `src/label_decomposition.py`, GEE configs for Congo/Borneo pilots, per-region norm / crop / label-source switches in `src/data/`. |
 
 ### SMOKE results so far (synthetic data, 500/100/100 samples, 2 CPU epochs; they reproduce nothing)
 Small CSV copies of every SMOKE metrics file are committed in `results/smoke/` (benchmark table, ablation, Phase 1
@@ -93,8 +93,8 @@ Regenerate: `python -m src.smoke_data --config configs/smoke/synthetic_bradd.yam
    then `python scripts/plot_early.py --early-dir results/runs/smoke_early_deter/early_eval` (~7.5 min each on CPU).
 3. ~~Phase 2 SMOKE~~ done (`results/smoke/`). `src.evaluate` now applies `trainer.float32_matmul_precision` so its
    counts match the test pass inside `src.train` exactly.
-4. **Phase 6 SMOKE**: `src.cross_biome` on a copy of the synthetic dated set with DETER/burn keys stripped, and
-   `src.label_decomposition` on two SMOKE runs (`data.label_source` prodes vs hansen at train, prodes at test).
+4. ~~Phase 6 SMOKE~~ done. Target-biome copy: `python -m src.smoke_data --config configs/smoke/synthetic_target_biome.yaml`;
+   label-decomposition configs `configs/smoke/labeldecomp_{prodes,hansen}.yaml`.
 5. **Final cleanup** (from the orchestrator prompt):
    - Keep: `PRD.md`, `README.md`, `REPORT.md`, `environment.yml`, `configs/`, `src/`, `gee/`, `scripts/`
      (download + plotting only), `third_party/`, `tests/`, `results/` (final CSVs and figures only), `.gitignore`.
@@ -109,6 +109,9 @@ Regenerate: `python -m src.smoke_data --config configs/smoke/synthetic_bradd.yam
    - Write `README.md` (setup, data download, the exact command to train and evaluate each model) and
      `REPORT.md`: (1) one-line status per phase with reason; (2) results tables, every number tied to its source
      file, SMOKE labelled; (3) the decisions log (section 6 below); (4) numbered owner to-do list (section 5).
+   - In early_eval/cross_biome, name the event-date reference from config (Amazon: `deter`; Phase 6: `hansen_year_end`,
+     1-year resolution) instead of hard-coding `deter`; add `hansen_loss` to `deter_classes` stage mapping in
+     `configs/eval/early.yaml` or a Phase-6 mapping.
    - Run the full suite one last time; commit; push.
 6. **Real runs (owner, needs GPU / data / credentials)**: section 5.
 

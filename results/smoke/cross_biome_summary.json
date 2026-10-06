@@ -1,0 +1,57 @@
+{
+  "label": "SMOKE",
+  "smoke": true,
+  "experiment_name": "smoke_early_deter",
+  "source": "src.cross_biome",
+  "checkpoint": "results/runs/smoke_early_deter/checkpoints/best-epoch0.ckpt",
+  "target_root": "data/synthetic_target_biome",
+  "tau_source": "results/runs/smoke_early_deter/early_eval/summary.json",
+  "stats_path": "data/synthetic_dated/vanadrishti_dated_train_stats.pt",
+  "tau": 0.9999610781669617,
+  "pixel": {
+    "with_or": {
+      "tp": 59688,
+      "fp": 0,
+      "fn": 6777,
+      "tn": 2790495,
+      "iou": 0.898036560582291,
+      "precision": 0.9999999999832462,
+      "recall": 0.898036560582291,
+      "f1": 0.9462795177134705
+    },
+    "without_or": {
+      "tp": 87,
+      "fp": 0,
+      "fn": 66378,
+      "tn": 2790495,
+      "iou": 0.0013089596027787715,
+      "precision": 0.9999999885057473,
+      "recall": 0.0013089596027787715,
+      "f1": 0.0026144969346491615
+    }
+  },
+  "patch": {
+    "with_or": {
+      "tp": 542,
+      "fp": 0,
+      "fn": 33,
+      "tn": 665,
+      "iou": 0.9426086940128544,
+      "precision": 0.9999999981549815,
+      "recall": 0.9426086940128544,
+      "f1": 0.9704565783877233
+    },
+    "without_or": {
+      "tp": 70,
+      "fp": 0,
+      "fn": 505,
+      "tn": 665,
+      "iou": 0.12173913022306239,
+      "precision": 0.9999999857142859,
+      "recall": 0.12173913022306239,
+      "f1": 0.217054262892855
+    }
+  },
+  "mmu": "MMU 0.01 ha (1 px of 10 m, 8-connected components)",
+  "early_summary": "results/runs/smoke_cross_biome/early/summary.json"
+}

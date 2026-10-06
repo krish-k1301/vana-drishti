@@ -1,0 +1,2 @@
+label,experiment_name,split,unit,tau,budget_per_km2_month,n_patches,n_skipped,n_alarms,area_km2,mean_months,rate_per_km2_month
+SMOKE,smoke_early_deter,test,components,0.9999610781669617,0.5,18,0,10,4.147200000000001,14.713210130047912,0.16388438762078042

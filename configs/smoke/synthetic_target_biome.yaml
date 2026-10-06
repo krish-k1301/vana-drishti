@@ -1,0 +1,9 @@
+# SMOKE data: Phase 6 target-biome copy of the synthetic dated set, laid out like the Congo/Borneo GEE export
+# (configs/gee/congo_pilot.yaml): Hansen labels, no DETER date / burn / PRODES keys, RADD dates kept.
+# `python -m src.smoke_data --config configs/smoke/synthetic_target_biome.yaml` (after synthetic_dated.yaml).
+# Same synthetic scenes as the source, so this tests plumbing only; it is not a different biome. Reproduces nothing.
+smoke: true
+target_biome:
+  source_root: data/synthetic_dated        # must carry SMOKE.txt
+  root: data/synthetic_target_biome        # gitignored (/data/); must be empty
+  positive_class_label: hansen_loss        # stored in deter_class, as events.positive_class_label in the GEE configs

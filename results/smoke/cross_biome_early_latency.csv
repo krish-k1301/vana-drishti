@@ -1,0 +1,31 @@
+label,experiment_name,reference,level,stratum_type,stratum,n,n_no_reference,n_detected,n_missed,median,q25,q75,iqr,mean
+SMOKE,smoke_early_deter,deter,event,all,all,0,33,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,deter,event,stage,hansen_loss,0,33,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,deter,event,size_bin,0.5-2 ha,0,28,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,deter,event,size_bin,>2 ha,0,5,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,burn,event,all,all,0,33,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,burn,event,stage,hansen_loss,0,33,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,burn,event,size_bin,0.5-2 ha,0,28,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,burn,event,size_bin,>2 ha,0,5,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,radd,event,all,all,33,0,0,33,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,radd,event,stage,hansen_loss,33,0,0,33,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,radd,event,size_bin,0.5-2 ha,28,0,0,28,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,radd,event,size_bin,>2 ha,5,0,0,5,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,deter,pixel,all,all,0,4582,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,deter,pixel,stage,hansen_loss,0,4582,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,deter,pixel,size_bin,0.5-2 ha,0,3258,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,deter,pixel,size_bin,>2 ha,0,1324,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,deter,pixel,edge_interior,edge,0,2903,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,deter,pixel,edge_interior,interior,0,1679,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,burn,pixel,all,all,0,4582,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,burn,pixel,stage,hansen_loss,0,4582,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,burn,pixel,size_bin,0.5-2 ha,0,3258,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,burn,pixel,size_bin,>2 ha,0,1324,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,burn,pixel,edge_interior,edge,0,2903,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,burn,pixel,edge_interior,interior,0,1679,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_deter,radd,pixel,all,all,4582,0,454,4128,105.0,96.0,109.0,13.0,101.36563876651982
+SMOKE,smoke_early_deter,radd,pixel,stage,hansen_loss,4582,0,454,4128,105.0,96.0,109.0,13.0,101.36563876651982
+SMOKE,smoke_early_deter,radd,pixel,size_bin,0.5-2 ha,3258,0,354,2904,103.0,93.0,107.0,14.0,99.11581920903954
+SMOKE,smoke_early_deter,radd,pixel,size_bin,>2 ha,1324,0,100,1224,109.0,104.0,109.75,5.75,109.33
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,edge,2903,0,230,2673,104.0,93.0,108.0,15.0,100.42173913043479
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,interior,1679,0,224,1455,105.0,100.0,109.0,9.0,102.33482142857143

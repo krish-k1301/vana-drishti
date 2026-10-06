@@ -1,0 +1,51 @@
+label,experiment_name,reference,level,stratum_type,stratum,offset_days,recall,n,n_no_reference
+SMOKE,smoke_early_deter,radd,event,all,all,0,0.0,33,0
+SMOKE,smoke_early_deter,radd,event,all,all,12,0.0,33,0
+SMOKE,smoke_early_deter,radd,event,all,all,24,0.0,33,0
+SMOKE,smoke_early_deter,radd,event,all,all,48,0.0,33,0
+SMOKE,smoke_early_deter,radd,event,all,all,90,0.0,33,0
+SMOKE,smoke_early_deter,radd,event,stage,hansen_loss,0,0.0,33,0
+SMOKE,smoke_early_deter,radd,event,stage,hansen_loss,12,0.0,33,0
+SMOKE,smoke_early_deter,radd,event,stage,hansen_loss,24,0.0,33,0
+SMOKE,smoke_early_deter,radd,event,stage,hansen_loss,48,0.0,33,0
+SMOKE,smoke_early_deter,radd,event,stage,hansen_loss,90,0.0,33,0
+SMOKE,smoke_early_deter,radd,event,size_bin,0.5-2 ha,0,0.0,28,0
+SMOKE,smoke_early_deter,radd,event,size_bin,0.5-2 ha,12,0.0,28,0
+SMOKE,smoke_early_deter,radd,event,size_bin,0.5-2 ha,24,0.0,28,0
+SMOKE,smoke_early_deter,radd,event,size_bin,0.5-2 ha,48,0.0,28,0
+SMOKE,smoke_early_deter,radd,event,size_bin,0.5-2 ha,90,0.0,28,0
+SMOKE,smoke_early_deter,radd,event,size_bin,>2 ha,0,0.0,5,0
+SMOKE,smoke_early_deter,radd,event,size_bin,>2 ha,12,0.0,5,0
+SMOKE,smoke_early_deter,radd,event,size_bin,>2 ha,24,0.0,5,0
+SMOKE,smoke_early_deter,radd,event,size_bin,>2 ha,48,0.0,5,0
+SMOKE,smoke_early_deter,radd,event,size_bin,>2 ha,90,0.0,5,0
+SMOKE,smoke_early_deter,radd,pixel,all,all,0,0.0,4582,0
+SMOKE,smoke_early_deter,radd,pixel,all,all,12,0.0,4582,0
+SMOKE,smoke_early_deter,radd,pixel,all,all,24,0.0,4582,0
+SMOKE,smoke_early_deter,radd,pixel,all,all,48,0.0,4582,0
+SMOKE,smoke_early_deter,radd,pixel,all,all,90,0.012658227848101266,4582,0
+SMOKE,smoke_early_deter,radd,pixel,stage,hansen_loss,0,0.0,4582,0
+SMOKE,smoke_early_deter,radd,pixel,stage,hansen_loss,12,0.0,4582,0
+SMOKE,smoke_early_deter,radd,pixel,stage,hansen_loss,24,0.0,4582,0
+SMOKE,smoke_early_deter,radd,pixel,stage,hansen_loss,48,0.0,4582,0
+SMOKE,smoke_early_deter,radd,pixel,stage,hansen_loss,90,0.012658227848101266,4582,0
+SMOKE,smoke_early_deter,radd,pixel,size_bin,0.5-2 ha,0,0.0,3258,0
+SMOKE,smoke_early_deter,radd,pixel,size_bin,0.5-2 ha,12,0.0,3258,0
+SMOKE,smoke_early_deter,radd,pixel,size_bin,0.5-2 ha,24,0.0,3258,0
+SMOKE,smoke_early_deter,radd,pixel,size_bin,0.5-2 ha,48,0.0,3258,0
+SMOKE,smoke_early_deter,radd,pixel,size_bin,0.5-2 ha,90,0.01780233271945979,3258,0
+SMOKE,smoke_early_deter,radd,pixel,size_bin,>2 ha,0,0.0,1324,0
+SMOKE,smoke_early_deter,radd,pixel,size_bin,>2 ha,12,0.0,1324,0
+SMOKE,smoke_early_deter,radd,pixel,size_bin,>2 ha,24,0.0,1324,0
+SMOKE,smoke_early_deter,radd,pixel,size_bin,>2 ha,48,0.0,1324,0
+SMOKE,smoke_early_deter,radd,pixel,size_bin,>2 ha,90,0.0,1324,0
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,edge,0,0.0,2903,0
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,edge,12,0.0,2903,0
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,edge,24,0.0,2903,0
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,edge,48,0.0,2903,0
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,edge,90,0.011712022046159145,2903,0
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,interior,0,0.0,1679,0
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,interior,12,0.0,1679,0
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,interior,24,0.0,1679,0
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,interior,48,0.0,1679,0
+SMOKE,smoke_early_deter,radd,pixel,edge_interior,interior,90,0.01429422275163788,1679,0

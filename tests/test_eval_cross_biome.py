@@ -1,7 +1,6 @@
 """SMOKE tests for src.cross_biome (Phase 6 transfer) and src.label_decomposition."""
 import csv
 import json
-import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -11,13 +10,12 @@ import torch
 
 from src import cross_biome, label_decomposition
 from src.config import load_config
-from src.data.samples import load_sample
 from src.data.stats import load_or_compute_stats
+from src.smoke_data import make_target_biome
 from tests.test_eval_early import fixture_setup
 
 REPO = Path(__file__).resolve().parents[1]
 SHARED_FIXTURES = (fixture_setup,)  # module fixture "setup" from the early-eval tests
-BRAZIL_ONLY_KEYS = ("event_date", "deter_class", "burn_month", "prodes_year")
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -30,18 +28,14 @@ def single_thread() -> Iterator[None]:
 
 
 def as_target_biome(source: Path, target: Path) -> Path:
-    """Copy a dated fixture, keep one test event and one test negative (fast on CPU), and strip everything
-    Brazil-only (DETER date/class, burn), keeping RADD dates and event masks."""
-    shutil.copytree(source, target)
+    """Target-biome copy of the dated fixture (src.smoke_data.make_target_biome), keeping one test event and one
+    test negative in meta.csv (fast on CPU)."""
+    (source / "SMOKE.txt").write_text("SMOKE: synthetic test fixture\n")
+    make_target_biome(source, target, "hansen_loss")
     meta = pd.read_csv(target / "meta.csv", index_col=0, keep_default_na=False)
     test = meta[meta["dated_set"] == "test"]
     keep = [test.index[test["deter_class"] != ""][0], test.index[test["deter_class"] == ""][0]]  # 1 event, 1 negative
-    meta = meta[(meta["dated_set"] != "test") | meta.index.isin(keep)].copy()
-    meta["deter_class"], meta["event_date"] = "", ""
-    meta.to_csv(target / "meta.csv")
-    for path in (target / "Samples").glob("*.pt"):
-        sample = load_sample(path)
-        torch.save({k: v for k, v in sample.items() if k not in BRAZIL_ONLY_KEYS}, path)
+    meta[(meta["dated_set"] != "test") | meta.index.isin(keep)].to_csv(target / "meta.csv")
     return target
 
 

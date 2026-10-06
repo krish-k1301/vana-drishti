@@ -1,0 +1,23 @@
+# SMOKE Phase 6 label decomposition (PRD 7 Phase 6), Hansen arm: the Phase 4 U-TAE recipe trained with STANDARD
+# full-window labels (no prefix truncation) on the synthetic dated set, Hansen labels (`label_hansen`) at
+# train/validation, PRODES (`label`) at test.
+# Identical to labeldecomp_prodes.yaml except label_source.train/validation. 2 epochs on CPU; reproduces nothing.
+# On synthetic data "prodes" = the cumulative DETER-polygon stack and "hansen" = its dilated, RADD-dated copy.
+base: ../early/utae_prefix_deter.yaml
+experiment_name: smoke_labeldecomp_hansen
+smoke: true
+
+data:
+  root: data/synthetic_dated
+  stats_path: data/synthetic_dated/vanadrishti_dated_train_stats.pt
+  num_workers: 2
+  prefix_truncation: null       # standard training; the loader refuses prefix truncation with hansen labels
+  label_source: {train: hansen, validation: hansen, test: prodes}
+
+train:
+  validation_prefix: none       # fixed_per_sample needs prefix truncation
+
+trainer:
+  max_epochs: 2
+  accelerator: cpu
+  enable_progress_bar: false
