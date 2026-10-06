@@ -38,8 +38,9 @@ def inputs(t: int = 5, hw: int = 16, pad_last: int = 0) -> tuple[torch.Tensor, t
 
 
 def test_registry_names() -> None:
-    """The Tier A names required by INTERFACES.md are registered."""
-    assert set(BACKBONES) == {"utae", "utae_seq2seq", "convlstm", "convgru", "unet3d"}
+    """The Tier A and Tier B/C names are registered."""
+    tier_a = {"utae", "utae_seq2seq", "convlstm", "convgru", "unet3d"}
+    assert set(BACKBONES) == tier_a | {"tsvit", "exchanger_unet", "anysat", "galileo"}
 
 
 @pytest.mark.parametrize("name", sorted(PARAMS))

@@ -6,6 +6,7 @@ from torch import nn
 
 from src.models.recurrent import MaskedConvGRUSeg, MaskedConvLSTMSeg
 from src.models.segment_network import PAD_VALUE, SegmentNetwork
+from src.models.tier_bc import TIER_BC_BACKBONES
 from src.models.unet3d import TimePaddedUNet3D
 from src.models.vendor import import_upstream
 
@@ -77,6 +78,7 @@ BACKBONES: dict[str, Callable[[dict], nn.Module]] = {
     "convgru": _build_plain(MaskedConvGRUSeg),
     "unet3d": _build_plain(TimePaddedUNet3D),
 }
+BACKBONES.update(TIER_BC_BACKBONES)
 
 
 def build_backbone(name: str, params: dict) -> nn.Module:

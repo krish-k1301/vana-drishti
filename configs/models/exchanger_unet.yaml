@@ -1,0 +1,58 @@
+# Tier B benchmark (PRD 6): Exchanger + U-Net (Cai et al., BMVC 2023), the 'unet' branch of upstream Segmentor.
+# Wrapper src/models/tier_bc/exchanger_unet.py::ExchangerUNet around vendored Exchanger4SITS @ 6a5ecf39
+# (third_party/exchanger4sits; needs timm, torch-scatter, detectron2, opencv at import, see its VENDORED.md).
+# "upstream L<n>" = line n of Exchanger4SITS configs/pastis/finetune/pastis_semseg_exchanger_unet_Fold0.yml,
+# the smallest semantic-segmentation config shipped (2 Exchanger stages, 8 group tokens).
+# PRD 6 caveat: tuned on optical PASTIS (32x32 training crops); 48x48 SAR patches may not suit it.
+# RECIPE FLAG (PRD 6): upstream fine-tunes from a temporal encoder pretrained on PASTIS pixel sets (L103,
+# weights on zenodo: blocked here and optical anyway), with focal CE gamma 2.0 (L57-60), AdamW lr 2e-4
+# wd 0.005 (L62, L106-107), poly LR with 10% warmup (L64-67), batch 4, 100 epochs, temporal dropout
+# 0.2-0.4 (L25). Here: trained from scratch with the shared recipe (focal alpha 0.75 gamma 1.0, AdamW lr 1e-3
+# wd 1e-6, ReduceLROnPlateau); report it as such.
+base: ../baseline_utae_focal.yaml
+experiment_name: exchanger_unet
+
+model:
+  name: exchanger_unet
+  params:
+    _replace: true
+    input_dim: 2                  # VV, VH (upstream L16: 10 S2 bands)
+    num_classes: 2                # binary change map (upstream L19: 19)
+    temporal_encoding:            # upstream SEGMENTOR section
+      pos_encode_type: default    # upstream L161: fixed sinusoid table indexed by day offset
+      pe_dim: 128                 # upstream L159
+      pe_t: 1000                  # upstream L160 (sinusoid period, days)
+      max_temp_len: 1000          # upstream L158 (largest day offset; row 0 of the table = padding)
+      with_gdd_pos: false         # upstream L163
+    exchanger:                    # upstream EXCHANGER section
+      embed_dims: [128, 128]      # upstream L34
+      num_token_list: [8, 8]      # upstream L38
+      num_heads_list: [8, 8]      # upstream L37
+      drop_path_rate: 0.1         # upstream L33
+      mlp_norm: maskedbatchnorm   # adapted (padding): upstream L36 'batchnorm' counts padded dates in BN statistics;
+                                  # upstream's own masked variant (lib/layers/normlayers.py) excludes them
+      mlp_act: gelu               # upstream L35
+    gp_block:                     # upstream GPBLOCK section (embed_dims/num_group_tokens/num_heads/drop_path come from exchanger)
+      add_pos_token: true         # upstream L41
+      act_type: gelu              # upstream L40
+      norm_type: layernorm        # upstream L50
+      ffn_ratio: 4.0              # upstream L46
+      qkv_bias: true              # upstream L53
+      drop: 0.1                   # upstream L43
+      attn_drop: 0.0              # upstream L42
+      mixer_depth: 1              # upstream L48
+      mixer_token_expansion: 0.5  # upstream L49
+      mixer_channel_expansion: 4.0  # upstream L47
+      untied_pos_encode: true     # upstream L54
+    unet:                         # upstream UNET section; 3 max-pools: 48 -> 24 -> 12 -> 6
+      base_channels: 64           # upstream L212
+      num_stages: 4               # upstream L219
+      strides: [1, 1, 1, 1]       # upstream L220
+      enc_num_convs: [2, 2, 2, 2] # upstream L217
+      dec_num_convs: [2, 2, 2]    # upstream L214
+      downsamples: [true, true, true]  # upstream L215
+      enc_dilations: [1, 1, 1, 1] # upstream L216
+      dec_dilations: [1, 1, 1]    # upstream L213
+      norm_type: bn               # upstream L218
+      act_type: gelu              # upstream L211
+      upsample_type: interp       # upstream L221

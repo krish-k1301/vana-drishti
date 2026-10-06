@@ -22,3 +22,9 @@ dependencies:
       - shapely==2.1.2
       - pyproj==3.7.2
       - pytest==9.1.1
+      # Tier B Exchanger+U-Net only: upstream lib/modules imports these at import time.
+      # torch-scatter and detectron2 build from source (needs a C++ toolchain; detectron2 needs --no-build-isolation).
+      - timm==1.0.30
+      - opencv-python-headless==5.0.0.93
+      - torch-scatter==2.1.2
+      - git+https://github.com/facebookresearch/detectron2.git@1e3e13bbf607

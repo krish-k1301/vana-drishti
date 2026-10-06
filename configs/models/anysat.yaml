@@ -1,0 +1,28 @@
+# Tier C benchmark (PRD 6): AnySat (Astruc et al., CVPR 2025). STATUS: BLOCKED (pretrained weights).
+# Wrapper src/models/tier_bc/anysat.py::AnySatSeg around vendored AnySat @ 5f6f475e (third_party/anysat).
+# The weights (hubconf.py L95: huggingface.co/g-astruc/AnySat/resolve/main/models/AnySat.pth) cannot be
+# downloaded here (proxy 403). Owner: download AnySat.pth and set checkpoint_path; it loads strictly.
+# With checkpoint_path null the encoder is random, which is NOT the PRD model (tests only).
+# Fine-tune: freeze_encoder false. Linear probe: freeze_encoder true (head only).
+# "hub L<n>" = line n of vendored hubconf.py; "FT/LP L<n>" = AnySat configs/exp/BraDD_AnySat_FT.yaml / _LP.yaml.
+# RECIPE FLAG (PRD 6): AnySat's BraDD runs use cross-entropy (configs/model/loss/CrossEntropyIgnore.yaml),
+# AdamW lr 5e-5 (FT L19) or 2e-4 (LP L19), wd 0.0 and ReduceLROnPlateau(mode=min, patience 10)
+# (configs/model/SemSeg.yaml), early stopping patience 10 on val IoU, batch 8 and 50% temporal dropout
+# (configs/dataset/BraDD.yaml), 3-band 's1' input (VV, VH, VV/VH) and the AnySat_full.pth checkpoint (FT L27).
+# Here: the shared recipe (focal alpha 0.75 gamma 1.0, AdamW lr 1e-3 wd 1e-6) is inherited; for a faithful
+# AnySat row set optim.lr to 5.0e-5 (FT) or 2.0e-4 (LP) and report the deviation.
+base: ../baseline_utae_focal.yaml
+experiment_name: anysat
+
+model:
+  name: anysat
+  params:
+    _replace: true
+    input_dim: 2            # VV, VH; must equal the projector's bands (hub L199-209: 's1-asc' in_channels 2)
+    num_classes: 2          # binary change map (configs/dataset/BraDD.yaml num_classes: 2)
+    model_size: base        # only 'base' weights are published (hub L94-97)
+    modality: s1-asc        # only 2-band S1 projector (hub L199); AnySat's own BraDD runs used 3-band 's1'
+    patch_size_m: 40        # FT/LP L22 scale 4 -> 4x4-pixel (40 m) patches, 12x12 tokens on 48x48
+    flash_attn: false       # flash-attn not installed (README: optional, speed/memory only)
+    checkpoint_path: null   # BLOCKED: path to AnySat.pth (dict with 'state_dict', hubconf from_pretrained)
+    freeze_encoder: false   # false = fine-tune (FT config); true = linear probe (LP config 'freeze: True')

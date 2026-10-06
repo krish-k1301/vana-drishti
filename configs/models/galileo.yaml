@@ -1,0 +1,28 @@
+# Tier C benchmark (PRD 6, optional): Galileo nano (nasaharvest), pretrained, S1 VV/VH only.
+# Wrapper src/models/tier_bc/galileo.py::GalileoSeg around vendored galileo @ 0f0b5b95 (third_party/galileo:
+# single_file_galileo.py + nano encoder weights, 4.2 MB, MIT). Fine-tune: freeze_encoder false;
+# linear probe: freeze_encoder true (head only, encoder in eval mode).
+# Encoder architecture comes from the checkpoint's config.json (embedding 128, depth 4, 8 heads, 24 timesteps).
+# RECIPE FLAG (PRD 6): upstream fine-tuning (src/eval/finetune.py) uses cross-entropy, AdamW with an LR grid
+# (FT_LRs 1e-5..6e-3), cosine schedule with 10% warmup, grad clipping 1.0 and gradient accumulation to an
+# effective batch of 256; linear probing is a separate protocol on frozen features. Here the shared recipe
+# (focal alpha 0.75 gamma 1.0, AdamW lr 1e-3 wd 1e-6, ReduceLROnPlateau, batch 4) is inherited; report it as such.
+# PRD 6 caveat: Galileo was pretrained on monthly composites (<= 24 timesteps, calendar months), not 6-12 day
+# S1 revisits; inputs here are day offsets mapped to relative months.
+base: ../baseline_utae_focal.yaml
+experiment_name: galileo
+
+model:
+  name: galileo
+  params:
+    _replace: true
+    input_dim: 2                     # VV, VH = single_file_galileo.py S1_BANDS
+    num_classes: 2                   # binary change map
+    checkpoint_path: third_party/galileo/data/models/nano   # folder with config.json + encoder.pt (repo-relative)
+    patch_size: 4                    # galileo eval.py L37 default --patch_size 4: 12x12 tokens on 48x48
+    max_timesteps: 24                # nano config.json max_sequence_length; longer windows are evenly subsampled
+    start_month: 5                   # galileo src/data/utils.py L33 DEFAULT_MONTH (0-based month of day 1)
+    days_per_month: 30.4375          # 365.25 / 12: day offset -> relative month
+    std_multiplier: 2.0              # galileo src/data/dataset.py L124 Normalizer std_multiplier (S1: (z + 2) / 4)
+    add_layernorm_on_exit: true      # galileo src/galileo.py L1274 GalileoWrapper default
+    freeze_encoder: false            # false = fine-tune; true = linear probe

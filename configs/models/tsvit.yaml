@@ -1,0 +1,29 @@
+# Tier B benchmark (PRD 6): TSViT (Tarasiou et al., CVPR 2023).
+# Wrapper src/models/tier_bc/tsvit.py::TSViTSeg around vendored DeepSatModels @ 53e65593
+# (third_party/deepsatmodels_tsvit). "upstream L<n>" = line n of DeepSatModels configs/PASTIS24/TSViT_fold1.yaml.
+# Temporal position: one-hot of (day offset mod 366) into upstream's 366-way lookup (upstream: day of year).
+# PRD 6 caveat: tuned on optical PASTIS (24x24 crops of 128x128 tiles); 48x48 SAR patches may not suit it.
+# RECIPE FLAG (PRD 6): upstream trains with masked cross-entropy, AdamW wd 0.0, cosine LR 1e-3 -> 5e-6 with
+# 10 warmup epochs, batch 16, 100 epochs (upstream L25, L46-57). Here the shared recipe is inherited
+# (focal alpha 0.75 gamma 1.0, AdamW lr 1e-3 wd 1e-6, ReduceLROnPlateau, batch 4); report it as such.
+base: ../baseline_utae_focal.yaml
+experiment_name: tsvit
+
+model:
+  name: tsvit
+  params:
+    _replace: true
+    input_dim: 2          # VV, VH (upstream L5 num_channels 11 = 10 S2 bands + time channel; wrapper adds the +1)
+    num_classes: 2        # binary change map; also the number of temporal class tokens (upstream L7: 19)
+    img_res: 48           # adapted for 48x48: BraDD patch size (upstream L3: 24)
+    patch_size: 2         # upstream L10; on 48x48 gives a 24x24 = 576-token spatial grid (upstream 12x12)
+    max_seq_len: 60       # upstream L4; stored by the constructor, unused by TSViT.forward
+    dim: 128              # upstream L11
+    temporal_depth: 4     # upstream L12
+    spatial_depth: 4      # upstream L13
+    heads: 4              # upstream L14
+    dim_head: 32          # upstream L16
+    dropout: 0.0          # upstream L9
+    emb_dropout: 0.0      # upstream L17
+    pool: cls             # upstream L15; asserted by the constructor, unused by TSViT.forward
+    scale_dim: 4          # upstream L18 (MLP width = dim * scale_dim)
