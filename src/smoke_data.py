@@ -2,7 +2,7 @@
 
 The data come from `tests.fixtures.make_bradd_fixture` (random speckle plus elliptical clearings). They are
 not measurements; anything trained on them is SMOKE and reproduces nothing. A `SMOKE.txt` marker is
-written next to `meta.csv`.
+written next to `meta.csv`. `synthetic.dated: true` writes the Phase 3 dated format instead.
 """
 import argparse
 from pathlib import Path
@@ -12,15 +12,15 @@ from src.training.run import SMOKE_LABEL
 from tests.fixtures import make_bradd_fixture
 
 
-def write_smoke_dataset(root: str | Path, n_per_split: dict, seed: int) -> Path:
+def write_smoke_dataset(root: str | Path, n_per_split: dict, seed: int, dated: bool) -> Path:
     """Generate the dataset under `root` (refuses a non-empty directory) and mark it SMOKE."""
     root = Path(root)
     if root.exists() and any(root.iterdir()):
         raise FileExistsError(f"{root} is not empty; delete it first to regenerate the SMOKE dataset")
-    make_bradd_fixture(root, n_per_split=n_per_split, seed=seed)
+    make_bradd_fixture(root, n_per_split=n_per_split, dated=dated, seed=seed)
     (root / "SMOKE.txt").write_text(
         f"{SMOKE_LABEL}: synthetic data from tests/fixtures.py::make_bradd_fixture "
-        f"(seed {seed}, counts {n_per_split}). Not real Sentinel-1 data.\n"
+        f"(dated {dated}, seed {seed}, counts {n_per_split}). Not real Sentinel-1 data.\n"
     )
     return root
 
@@ -35,7 +35,7 @@ def main() -> None:
     if not require(cfg, "smoke"):
         raise ValueError("synthetic data configs must set smoke: true")
     spec = require(cfg, "synthetic")
-    root = write_smoke_dataset(spec["root"], dict(spec["n_per_split"]), spec["seed"])
+    root = write_smoke_dataset(spec["root"], dict(spec["n_per_split"]), spec["seed"], spec["dated"])
     print(f"[{SMOKE_LABEL}] wrote synthetic BraDD-format dataset {spec['n_per_split']} to {root}")
 
 

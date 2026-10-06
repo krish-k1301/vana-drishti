@@ -31,13 +31,17 @@ def _prefix_for(cfg: Mapping, phase: str, seed: int) -> PrefixTruncation | None:
                             int(spec.get("seed", seed)))
 
 
-def _max_samples(spec: Mapping | int | None, phase: str) -> int | None:
-    """Per-phase sample cap from either a {phase: n} mapping or a single int."""
+def _per_phase(spec: object, phase: str) -> object:
+    """Value for one phase from either a {phase: value} mapping or a single value for every phase."""
     return spec.get(phase) if isinstance(spec, Mapping) else spec
 
 
 def build_dataset(data_cfg: Mapping, phase: str) -> Dataset:
-    """One phase's dataset as described by the config (keys documented in configs/data/bradd.yaml)."""
+    """One phase's dataset as described by the config (keys documented in configs/data/*.yaml).
+
+    The optional blocks per_region_norm, seasonal_window and crop are off when absent; label_source may be
+    a single value or a {phase: value} mapping (Phase 6: train on hansen, test on prodes).
+    """
     kind = data_cfg.get("dataset", "bradd")
     if kind not in DATASETS:
         raise ValueError(f"unknown dataset '{kind}', expected one of {DATASETS}")
@@ -48,9 +52,13 @@ def build_dataset(data_cfg: Mapping, phase: str) -> Dataset:
         "stats_path": data_cfg.get("stats_path"),
         "normalization": data_cfg.get("normalization", "zscore"),
         "temporal_subsample": subsample or None,
-        "max_samples": _max_samples(data_cfg.get("max_samples"), phase),
+        "max_samples": _per_phase(data_cfg.get("max_samples"), phase),
         "seed": seed,
         "subsample_at_test": bool(subsample.get("at_test", False)),
+        "per_region_norm": data_cfg.get("per_region_norm"),
+        "seasonal_window": data_cfg.get("seasonal_window"),
+        "crop": data_cfg.get("crop"),
+        "label_source": _per_phase(data_cfg.get("label_source", "prodes"), phase),
     }
     if kind == "dated":
         return DatedDataset(data_cfg["root"], phase, prefix=_prefix_for(data_cfg, phase, seed), **kwargs)

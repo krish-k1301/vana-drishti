@@ -14,7 +14,8 @@
 #   Early stopping                    -> trainer.early_stopping.* (patience 30, min_delta 0.001), max_epochs 200
 #   Batch size 4                      -> data.batch_size: 4 (inherited from configs/data/bradd.yaml)
 #   Normalisation z-score, train stats-> data section (configs/data/bradd.yaml)
-#   Forward mode segment +-30 days    -> model.forward_type: segment, error_days_before/after: 30
+#   Forward mode segment +-30 days    -> model.forward_type: segment, error_days_before/after: 30,
+#                                        inclusive_end: false (strict upper bound, as upstream)
 #   Seed 42                           -> seed: 42
 #   Split close_set column            -> data section (configs/data/bradd.yaml)
 experiment_name: baseline_utae
@@ -30,6 +31,7 @@ model:
   forward_type: segment
   error_days_before: 30
   error_days_after: 30
+  inclusive_end: false  # upstream strict bound: day < end + error_days_after
   params:
     input_dim: 2
     encoder_widths: [64, 64, 64, 128]
@@ -49,6 +51,10 @@ model:
 
 loss:
   name: cross_entropy
+
+train:
+  init_checkpoint: null    # path to a src.train Lightning checkpoint to fine-tune from (Phase 6); null = random init
+  validation_prefix: none  # none | fixed_per_sample (early detection: one deterministic prefix cutoff per val sample)
 
 optim:
   name: adamw

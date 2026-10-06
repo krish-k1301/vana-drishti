@@ -17,10 +17,10 @@ UTAE_PARAMS = {
 }
 
 
-def utae_cfg(before: int = 30, after: int = 30) -> dict:
-    """Model section equal to configs/baseline_utae.yaml with the given margins."""
+def utae_cfg(before: int = 30, after: int = 30, inclusive_end: bool = False) -> dict:
+    """Model section equal to configs/baseline_utae.yaml with the given margins and end bound."""
     return {
-        "name": "utae", "forward_type": "segment", "error_days_before": before,
+        "name": "utae", "forward_type": "segment", "error_days_before": before, "inclusive_end": inclusive_end,
         "error_days_after": after, "params": {**UTAE_PARAMS, "positional_encoding_period": 1000},
     }
 
@@ -132,16 +132,53 @@ def test_pad_mask_zeroes_padded_frames() -> None:
     assert torch.equal(got, expected)
 
 
-def test_real_all_zero_frame_and_empty_window_raise() -> None:
-    """A real frame that looks like padding, or a window with no dates, is an error, not silent garbage."""
+def test_real_all_zero_frame_raises() -> None:
+    """A real frame that looks like padding is an error, not silent garbage."""
     net = SegmentNetwork(DayRecorder(), error_days_before=30, error_days_after=30)
     images, days, target_days, pad_mask = batch(hw=8)
     zeroed = images.clone()
     zeroed[0, 2] = 0
     with pytest.raises(ValueError, match="non-padded frame"):
         net(zeroed, days, target_days, pad_mask)
-    with pytest.raises(ValueError, match="no image dates"):
-        net(images, days, torch.tensor([[300, 400], [50, 100]]), pad_mask)
+
+
+def test_padded_labels_and_empty_windows_are_masked() -> None:
+    """Padded label days (0) and windows without images are skipped, zero-filled and flagged invalid."""
+    recorder = DayRecorder()
+    net = SegmentNetwork(recorder, error_days_before=10, error_days_after=0, inclusive_end=True)
+    days = torch.tensor([[10, 20, 30, 40, 50, 60], [15, 25, 35, 45, 0, 0]])
+    images = torch.randn(2, 6, 2, 4, 4)
+    target_days = torch.tensor([[20, 40, 60], [25, 45, 0]])
+    mask = net.interval_mask(days, target_days, days == 0)
+    assert mask.tolist() == [[True, True], [True, False]]
+    out = net(images, days, target_days, days == 0)
+    assert out.shape == (2, 2, 2, 4, 4)
+    assert recorder.calls[0][1].shape[0] == 2 and recorder.calls[1][1].tolist() == [[40, 50, 60]]
+    empty = torch.tensor([[200, 300, 400], [25, 45, 0]])
+    assert net.interval_mask(days, empty, days == 0).tolist() == [[False, False], [True, False]]
+    with pytest.raises(ValueError, match="no label interval"):
+        net(images, days, torch.tensor([[200, 300, 400], [300, 400, 0]]), days == 0)
+
+
+@pytest.mark.parametrize("inclusive_end", [True, False])
+def test_inclusive_end_uses_cutoff_image_only_when_set(inclusive_end: bool) -> None:
+    """error_days_after=0: the image at t_c matters iff inclusive_end; the image at t_c + 1 never does."""
+    torch.manual_seed(0)
+    net = build_model(utae_cfg(before=30, after=0, inclusive_end=inclusive_end)).eval()
+    images, days, _, pad_mask = batch(hw=32)
+    days = torch.tensor([[5, 20, 60, 100, 101, 200], [40, 70, 90, 91, 0, 0]])
+    target_days = torch.tensor([[60, 100], [50, 90]])  # cutoffs t_c = 100 and 90
+    at_cutoff, after_cutoff = images.clone(), images.clone()
+    at_cutoff[0, 3] *= 5
+    at_cutoff[1, 2] *= 5
+    after_cutoff[0, 4] *= 5
+    after_cutoff[1, 3] *= 5
+    with torch.no_grad():
+        reference = net(images, days, target_days, pad_mask)
+        changed = net(at_cutoff, days, target_days, pad_mask)
+        unchanged = net(after_cutoff, days, target_days, pad_mask)
+    assert torch.equal(unchanged, reference)
+    assert torch.equal(changed, reference) is not inclusive_end
 
 
 def test_upstream_quirk_later_intervals_lose_lower_margin() -> None:

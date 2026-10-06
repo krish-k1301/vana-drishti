@@ -112,3 +112,13 @@ def test_reference_configs_are_upstream_compatible(configs_dir: Path, name: str)
     check_upstream_compatible(cfg)
     assert cfg["experiment_name"].startswith(("reference_", "smoke_reference_"))
     assert require(cfg, "reference.split") + "_set" == require(cfg, "data.split_column")
+
+
+def test_replace_with_base_swaps_whole_section(tmp_path: Path) -> None:
+    """`data: {_replace: true, base: other.yaml}` drops the inherited data keys but keeps other.yaml's."""
+    write(tmp_path / "a.yaml", {"x": 1, "y": 2})
+    write(tmp_path / "b.yaml", {"z": 3})
+    write(tmp_path / "parent.yaml", {"data": {"base": "a.yaml"}})
+    child = write(tmp_path / "child.yaml", {"base": "parent.yaml",
+                                           "data": {"_replace": True, "base": "b.yaml", "w": 4}})
+    assert load_config(child) == {"data": {"z": 3, "w": 4}}

@@ -1,0 +1,24 @@
+# Phase 4 early-detection training, anchor = burn (PRD 7 Phase 4, 4.4 issue 5). Architecture and recipe unchanged
+# from baseline_utae_focal.yaml (U-TAE, 8 heads, focal 0.75 / 1.0, AdamW 1e-3 / 1e-6); only data and window change.
+#   data: dated Amazon set; training samples are cut at a random cutoff t_c with labels rebuilt from the
+#         burn date up to t_c (PrefixTruncation). Validation: one fixed cutoff per sample (train.validation_prefix),
+#         so the monitored validation/pixel_iou is the prefix task with the same anchor every epoch.
+#         Test inside src.train: stored full-window labels; the real early-detection test is src.early_eval.
+#   model: trailing margin 0 + inclusive end = images up to and including each interval's end date, never after.
+base: ../baseline_utae_focal.yaml
+experiment_name: early_utae_prefix_burn
+
+data:
+  _replace: true
+  base: ../data/dated_amazon.yaml
+  prefix_truncation:
+    anchor: burn
+    phases: [train]
+
+model:
+  error_days_before: 30   # leading margin is fine (PRD 7 Phase 4)
+  error_days_after: 0     # trailing margin 0: never look past the label date / cutoff
+  inclusive_end: true     # day <= end: the image acquired exactly at t_c is used
+
+train:
+  validation_prefix: fixed_per_sample

@@ -1,0 +1,4 @@
+# Phase 6 label decomposition (PRD 7 Phase 6): PRODES-trained vs Hansen-trained Amazon models, both evaluated
+# against PRODES labels by src.evaluate. Used by src.label_decomposition.
+eval_name: eval_test        # src.evaluate output folder inside each run directory
+reference_label_source: prodes   # both evaluations must have been scored against these labels

@@ -19,7 +19,8 @@ RUN_FILES = ("metrics_test.json", "metrics_test.csv", "config_resolved.yaml", "r
 @pytest.fixture(scope="module", name="tiny_root")
 def fixture_tiny_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """8/4/4-sample SMOKE dataset written through the src.smoke_data entry point."""
-    return write_smoke_dataset(tmp_path_factory.mktemp("tiny") / "data", {"train": 8, "validation": 4, "test": 4}, 0)
+    counts = {"train": 8, "validation": 4, "test": 4}
+    return write_smoke_dataset(tmp_path_factory.mktemp("tiny") / "data", counts, 0, dated=False)
 
 
 def tiny_config(config: str, root: Path, runs: Path) -> dict:

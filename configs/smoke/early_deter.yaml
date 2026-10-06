@@ -1,0 +1,14 @@
+# SMOKE run of configs/early/utae_prefix_deter.yaml on the synthetic dated set, 2 epochs on CPU.
+base: ../early/utae_prefix_deter.yaml
+experiment_name: smoke_early_deter
+smoke: true
+
+data:
+  root: data/synthetic_dated
+  stats_path: data/synthetic_dated/vanadrishti_dated_train_stats.pt
+  num_workers: 2
+
+trainer:
+  max_epochs: 2
+  accelerator: cpu
+  enable_progress_bar: false

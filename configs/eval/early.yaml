@@ -1,10 +1,12 @@
 # Phase 5 early-detection evaluation settings for src.early_eval (PRD 3, 7 Phase 5, 9).
 base: evaluate.yaml
-min_dates: 4                # cutoffs t_c = every image day with >= this many images in the interval window
+min_dates: 4                # cutoffs t_c = every image day with >= this many images up to it (as PrefixTruncation)
+interval_combiner: noisy_or # noisy_or: 1 - prod(1 - p_k) over the prefix label intervals | max: max_k p_k
 cutoff_batch_size: 8        # prefixes run through the model at once (memory only, no effect on results)
 event_curve: mean           # mean | max over event-mask pixels: the per-event curve used for event latency
 persist_k: 1                # consecutive cutoffs >= tau needed to call a detection (1 = first crossing)
-recall_offsets_days: [0, 12, 24, 48, 90]   # recall at DETER date + offset (PRD 7 Phase 5)
+recall_reference: deter     # deter | burn | radd: reference date for recall at offsets
+recall_offsets_days: [0, 12, 24, 48, 90]   # recall at reference date + offset (PRD 7 Phase 5)
 false_alarms:
   budget_per_km2_month: 0.5 # false-alarm budget used to choose tau on VALIDATION negatives
   unit: components          # components | pixels

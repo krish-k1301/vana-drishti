@@ -9,7 +9,9 @@ import torch
 from src.data.samples import load_sample, read_meta
 
 BASE_COLUMNS = ["alert_idx", "center_idx", "date", "sampling_type", "state", "file", "close_set"]
-DATED_COLUMNS = BASE_COLUMNS + ["event_date", "deter_class", "region_block", "dated_set"]
+DATED_COLUMNS = BASE_COLUMNS + ["event_date", "deter_class", "region_block", "dated_set", "patch_id", "lon",
+                                 "lat", "relative_orbit", "orbit_pass", "platforms", "n_dates", "gap_median_days",
+                                 "gap_max_days", "modis_burn_flag"]
 
 
 def test_meta_columns_and_splits(bradd_root):
@@ -61,5 +63,6 @@ def test_dated_format(dated_root):
     assert (s["label"][1:] >= s["label"][:-1]).all(), "cumulative labels"
     assert s["burn_month"].dtype == torch.int16 and s["radd_date"].dtype == torch.int32
     assert s["event_mask"].dtype == torch.uint8
+    assert s["label_hansen"].dtype == torch.int64 and s["label_hansen"].shape == s["label"].shape
     span = (s["image_dates"][-1] - s["image_dates"][0]).days
     assert 440 < span < 520

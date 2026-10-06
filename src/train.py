@@ -16,7 +16,8 @@ from src.losses.build_loss import build_loss
 from src.models.build_model import build_model
 from src.models.inspection import count_parameters, describe_utae_shapes
 from src.training.meters import score_rows
-from src.training.module import ChangeDetectionModule
+from src.training.module import ChangeDetectionModule, load_model_weights
+from src.training.validation_prefix import validation_loader
 from src.training.run import (SMOKE_LABEL, best_checkpoint, build_trainer, monitored_callbacks, run_dir_for,
                               run_logger, seed_and_precision, write_metrics)
 
@@ -56,9 +57,18 @@ def run(cfg: dict) -> dict:
     if require(cfg, "smoke"):
         logger.info("%s run: synthetic or shortened data, results reproduce nothing", SMOKE_LABEL)
     seed_and_precision(cfg)
-    loaders = build_dataloaders(data_config(cfg))
+    data_cfg = data_config(cfg)
+    loaders = build_dataloaders(data_cfg)
+    fixed_validation = validation_loader(data_cfg, require(cfg, "train.validation_prefix"))
+    if fixed_validation is not None:
+        loaders["validation"] = fixed_validation
+        logger.info("validation: prefix truncation at one fixed cutoff per sample (seed + row index)")
     model = build_model(require(cfg, "model"))
     log_model_summary(logger, cfg, model, loaders["train"])
+    init_checkpoint = require(cfg, "train.init_checkpoint")
+    if init_checkpoint is not None:
+        load_model_weights(model, init_checkpoint)
+        logger.info("initialised model weights from %s (strict)", init_checkpoint)
     module = ChangeDetectionModule(model, build_loss(require(cfg, "loss")), require(cfg, "optim"))
     monitor = monitored_key(cfg)
     callbacks = monitored_callbacks(require(cfg, "trainer"), run_dir, monitor)

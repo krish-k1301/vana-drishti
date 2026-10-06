@@ -4,6 +4,16 @@ import torch
 from src.metrics.or_rule import OrRuleMeter
 from src.metrics.segmentation import PatchMeter, change_detection_outputs
 
+def select_intervals(logits: torch.Tensor, targets: torch.Tensor, mask: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """Keep the valid label intervals as single-interval samples: logits [N,1,2,H,W], targets [N,2,H,W].
+
+    `mask` [B, t-1] comes from `SegmentNetwork.interval_mask`; scoring is per interval, so this equals
+    scoring the batch with the invalid (padded / imageless) intervals removed.
+    """
+    pairs = torch.stack([targets[:, :-1], targets[:, 1:]], dim=2)  # [B, t-1, 2, H, W]
+    return logits[mask].unsqueeze(1), pairs[mask]
+
+
 SCORE_KEYS = ("iou", "precision", "recall", "f1")
 COUNT_KEYS = ("tp", "fp", "fn", "tn")
 
@@ -22,9 +32,12 @@ class PhaseMeters:
         self.patch_plain = PatchMeter()
         self.loss_sum = 0.0
         self.loss_batches = 0
+        self.skipped_intervals = 0
 
-    def update(self, logits: torch.Tensor, targets: torch.Tensor, loss: torch.Tensor | None) -> None:
-        """Add one batch: logits [B,t-1,2,H,W], targets [B,t,H,W], optional scalar loss."""
+    def update(self, logits: torch.Tensor, targets: torch.Tensor, loss: torch.Tensor | None,
+               skipped: int = 0) -> None:
+        """Add one batch: logits [B,t-1,2,H,W], targets [B,t,H,W], optional loss, count of skipped intervals."""
+        self.skipped_intervals += skipped
         logits = logits.detach()
         self.pixel.update(logits, targets)
         with_or = change_detection_outputs(logits, targets, use_or=True)
@@ -44,6 +57,7 @@ class PhaseMeters:
             "or_rule": {k: pixel[k] for k in ("iou_delta", "f1_delta", "n_pixels", "n_prior_positive",
                                               "n_forced_fp", "n_forced_tp")},
             "loss": self.loss_sum / self.loss_batches if self.loss_batches else None,
+            "skipped_intervals": self.skipped_intervals,
         }
 
 
@@ -55,6 +69,7 @@ def flat_scores(results: dict, phase: str) -> dict[str, float]:
             for key in SCORE_KEYS:
                 flat[f"{phase}/{level}_{key}{suffix}"] = float(results[level][variant][key])
     flat[f"{phase}/or_iou_delta"] = float(results["or_rule"]["iou_delta"])
+    flat[f"{phase}/skipped_intervals"] = float(results["skipped_intervals"])
     if results["loss"] is not None:
         flat[f"{phase}/loss"] = float(results["loss"])
     return flat

@@ -6,7 +6,8 @@ Rules:
     are deep-merged on top. Base files may themselves use `base:`.
   * Deep merge: mappings merge key by key, everything else (scalars, lists) is replaced.
   * A mapping containing `_replace: true` replaces the inherited mapping instead of merging into it
-    (used when a model config swaps the whole `model.params` block).
+    (used when a model config swaps the whole `model.params` block, or an early config swaps the whole
+    `data` section for `base: data/dated_amazon.yaml`).
   * Overrides `a.b.c=value` parse `value` with yaml.safe_load and may only change keys that exist.
     YAML 1.1 reads `1e-3` as a string; write floats with a dot (`1.0e-3`), in files and overrides.
 No defaults are filled in anywhere: a missing key is an error (see `require`).
@@ -41,14 +42,19 @@ def _strip(value: Any) -> Any:
 
 
 def _resolve(node: Any, directory: Path, chain: tuple[Path, ...]) -> Any:
-    """Expand every `base:` key inside `node`, recursing into nested mappings."""
+    """Expand every `base:` key inside `node`, recursing into nested mappings.
+
+    A mapping with both `base:` and `_replace: true` is its base merged with its own keys, and that result
+    replaces (instead of merging into) whatever the enclosing file inherits at the same place.
+    """
     if not isinstance(node, dict):
         return node
-    resolved = {k: _resolve(v, directory, chain) for k, v in node.items() if k != BASE_KEY}
-    if BASE_KEY not in node:
-        return resolved
-    base_cfg = _load_file((directory / node[BASE_KEY]).resolve(), chain)
-    return deep_merge(base_cfg, resolved)
+    resolved = {k: _resolve(v, directory, chain) for k, v in node.items() if k not in (BASE_KEY, REPLACE_KEY)}
+    if BASE_KEY in node:
+        resolved = deep_merge(_load_file((directory / node[BASE_KEY]).resolve(), chain), resolved)
+    if node.get(REPLACE_KEY) is True:
+        resolved[REPLACE_KEY] = True
+    return resolved
 
 
 def _load_file(path: Path, chain: tuple[Path, ...]) -> Any:

@@ -6,9 +6,19 @@ import torch
 from torch import nn
 
 from src.metrics.segmentation import change_detection_outputs
-from src.training.meters import PhaseMeters, flat_scores
+from src.training.meters import PhaseMeters, flat_scores, select_intervals
 
 PHASES = ("train", "validation", "test")
+MODEL_PREFIX = "model."
+
+
+def load_model_weights(model: nn.Module, checkpoint: str) -> None:
+    """Load the `model.*` weights of a ChangeDetectionModule Lightning checkpoint strictly (fine-tuning)."""
+    state = torch.load(checkpoint, map_location="cpu", weights_only=False)["state_dict"]
+    weights = {k.removeprefix(MODEL_PREFIX): v for k, v in state.items() if k.startswith(MODEL_PREFIX)}
+    if not weights:
+        raise ValueError(f"checkpoint {checkpoint} has no '{MODEL_PREFIX}*' weights")
+    model.load_state_dict(weights, strict=True)
 
 
 class ChangeDetectionModule(pl.LightningModule):
@@ -29,11 +39,12 @@ class ChangeDetectionModule(pl.LightningModule):
         return self.model(batch["Images"], batch["ImageDays"], batch["TargetDays"], batch["PadMask"])
 
     def _step(self, batch: dict, phase: str) -> torch.Tensor:
-        """Forward, loss on change targets, and meter update for one batch."""
-        logits = self(batch)
-        out = change_detection_outputs(logits, batch["Targets"], use_or=True)
+        """Forward, loss on the valid intervals' change targets, and meter update for one batch."""
+        mask = self.model.interval_mask(batch["ImageDays"], batch["TargetDays"], batch["PadMask"])
+        logits, targets = select_intervals(self(batch), batch["Targets"], mask)
+        out = change_detection_outputs(logits, targets, use_or=True)
         loss = self.loss(out["loss_pred"], out["loss_target"])
-        self.meters[phase].update(logits, batch["Targets"], loss)
+        self.meters[phase].update(logits, targets, loss, skipped=int((~mask).sum()))
         return loss
 
     def training_step(self, batch: dict, batch_idx: int) -> torch.Tensor:

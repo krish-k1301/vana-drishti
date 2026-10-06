@@ -16,17 +16,20 @@ class DatedDataset(BraDDDataset):
     Extra item keys, all in days on the same origin as `ImageDays` (-1 = none):
     `EventDay` [] (DETER date), `BurnDay` [H,W], `RaddDay` [H,W], plus `EventMask` uint8 [H,W].
     If `prefix` is given, it is applied after normalisation (and after any temporal subsample);
-    without it the stored labels are returned unchanged.
+    without it the stored labels are returned unchanged. The prefix rebuilds labels from DETER/burn
+    event days, so it cannot be combined with `label_source='hansen'` (that would mix label sources).
     """
 
     def __init__(self, root: str | Path, phase: str, split_column: str = "dated_set",
                  prefix: PrefixTruncation | None = None, **kwargs) -> None:
         """Same arguments as BraDDDataset plus an optional PrefixTruncation."""
         super().__init__(root, phase, split_column=split_column, **kwargs)
+        if prefix is not None and self.label_key != "label":
+            raise ValueError("prefix truncation rebuilds DETER/burn labels; use label_source 'prodes' with it")
         self.prefix = prefix
 
     def reseed(self, seed: int) -> None:
-        """Reseed the temporal subsample and the prefix cutoff generator."""
+        """Reseed the base random transforms and the prefix cutoff generator."""
         super().reseed(seed)
         if self.prefix is not None:
             self.prefix.reseed(seed + 1)
@@ -48,7 +51,7 @@ class DatedDataset(BraDDDataset):
         item["EventMask"] = mask.to(torch.uint8)
         return item
 
-    def apply_transforms(self, item: dict) -> dict:
-        """Base transforms, then the prefix truncation if configured."""
-        item = super().apply_transforms(item)
+    def apply_transforms(self, item: dict, tile: int = 0) -> dict:
+        """Base transforms (including any crop), then the prefix truncation if configured."""
+        item = super().apply_transforms(item, tile)
         return self.prefix(item) if self.prefix is not None else item

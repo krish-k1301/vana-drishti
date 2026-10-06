@@ -3,6 +3,7 @@ import csv
 import json
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,15 @@ TINY_UTAE = [
     "model.params.out_conv=[8, 2]", "model.params.d_model=32", "model.params.n_head=4",
 ]
 
+
+
+@pytest.fixture(scope="module", autouse=True)
+def single_thread() -> Iterator[None]:
+    """Run this module's tiny CPU models on one thread (much faster than oversubscribed BLAS threads)."""
+    threads = torch.get_num_threads()
+    torch.set_num_threads(1)
+    yield
+    torch.set_num_threads(threads)
 
 @pytest.fixture(scope="module", name="trained")
 def fixture_trained(bradd_root: Path, tmp_path_factory: pytest.TempPathFactory) -> tuple[dict, Path]:

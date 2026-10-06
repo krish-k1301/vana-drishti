@@ -37,23 +37,24 @@ def latency_table(events: pd.DataFrame, pixels: pd.DataFrame) -> list[dict]:
 
 
 def recall_table(events: pd.DataFrame, curves: list[tuple[np.ndarray, np.ndarray]], pixels: pd.DataFrame,
-                 offsets: Sequence[float], tau: float, persist_k: int) -> list[dict]:
-    """Recall at DETER date + offset per level and stratum; events use only cutoffs <= deadline."""
+                 offsets: Sequence[float], tau: float, persist_k: int, reference: str) -> list[dict]:
+    """Recall at reference date + offset per level and stratum; events use only cutoffs <= deadline."""
     rows = []
     if events.empty:
         return rows
     for kind, stratum, part in groups(events, EVENT_STRATA):
-        result = recall_at_offsets([curves[i] for i in part.index], part["ref_deter"].to_numpy(), offsets,
+        result = recall_at_offsets([curves[i] for i in part.index], part[f"ref_{reference}"].to_numpy(), offsets,
                                    tau=tau, persist_k=persist_k)
-        rows += _recall_rows("event", kind, stratum, result)
+        rows += _recall_rows(reference, "event", kind, stratum, result)
     for kind, stratum, part in groups(pixels, PIXEL_STRATA):
-        result = recall_from_detection_days(part["detection_day"].to_numpy(), part["ref_deter"].to_numpy(), offsets)
-        rows += _recall_rows("pixel", kind, stratum, result)
+        detected = part["detection_day"].to_numpy()
+        result = recall_from_detection_days(detected, part[f"ref_{reference}"].to_numpy(), offsets)
+        rows += _recall_rows(reference, "pixel", kind, stratum, result)
     return rows
 
 
-def _recall_rows(level: str, kind: str, stratum: str, result: dict) -> list[dict]:
+def _recall_rows(reference: str, level: str, kind: str, stratum: str, result: dict) -> list[dict]:
     """Flatten one recall result into rows (one per offset)."""
-    return [{"reference": "deter", "level": level, "stratum_type": kind, "stratum": stratum,
+    return [{"reference": reference, "level": level, "stratum_type": kind, "stratum": stratum,
              "offset_days": offset, "recall": value, "n": result["n"], "n_no_reference": result["n_no_reference"]}
             for offset, value in result["recall"].items()]

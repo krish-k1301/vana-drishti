@@ -101,6 +101,15 @@ def _burn_layer(rng: np.random.Generator, deter_class: str | None, mask: np.ndar
     return _epoch_days(mask, None, np.int16)
 
 
+def _dilate(mask: np.ndarray) -> np.ndarray:
+    """One-pixel 4-neighbour dilation (Hansen's 30 m loss mask is coarser than the DETER polygon)."""
+    out = mask.copy()
+    for axis in (0, 1):
+        for shift in (-1, 1):
+            out |= np.roll(mask, shift, axis=axis)
+    return out
+
+
 def _dated_record(rng: np.random.Generator, sampling_type: str, event: dt.date,
                   deter_class: str | None, block: str) -> dict:
     """One dated sample: ~12 months before to ~4 months after the event, monthly cumulative labels."""
@@ -114,11 +123,15 @@ def _dated_record(rng: np.random.Generator, sampling_type: str, event: dt.date,
     label = np.stack([pre | (mask & (event_off <= d)) for d in label_offs]).astype(np.int64)
     base = OPEN_DB if sampling_type in ("oldDeforest", "herbaceous") else FOREST_DB
     radd = event + dt.timedelta(days=int(rng.integers(5, 40)))
+    hansen = _dilate(mask)
+    radd_off = (radd - start).days
+    label_hansen = np.stack([pre | (hansen & (radd_off <= d)) for d in label_offs]).astype(np.int64)
     return {
         "image_dates": [start + dt.timedelta(days=int(o)) for o in offsets],
         "label_dates": [start + dt.timedelta(days=int(o)) for o in label_offs],
         "image": _images(rng, offsets, base, mask, event_off, np.zeros_like(mask)),
         "label": torch.from_numpy(label),
+        "label_hansen": torch.from_numpy(label_hansen),
         "event_date": event if deter_class else None,
         "deter_class": deter_class or "",
         "burn_month": _burn_layer(rng, deter_class, mask, event),
@@ -155,7 +168,20 @@ def _one_sample(rng: np.random.Generator, idx: int, split: str, position: int,
     block = str(rng.choice(REGION_BLOCKS[split]))
     row.update({"event_date": day.isoformat() if deter_class else "", "deter_class": deter_class or "",
                 "region_block": block, "dated_set": split})
-    return row, _dated_record(rng, sampling_type, day, deter_class, block)
+    sample = _dated_record(rng, sampling_type, day, deter_class, block)
+    row.update(_provenance(idx, sample["image_dates"]))
+    return row, sample
+
+
+def _provenance(idx: int, dates: list[dt.date]) -> dict:
+    """GEE provenance meta columns (gee/to_bradd.py EXTRA_COLUMNS); own generator keeps the sample stream fixed."""
+    rng = np.random.default_rng(idx)
+    gaps = np.diff([d.toordinal() for d in dates])
+    return {"patch_id": f"P{idx:06d}", "lon": round(float(rng.uniform(-60, -50)), 4),
+            "lat": round(float(rng.uniform(-10, -2)), 4), "relative_orbit": int(rng.integers(1, 176)),
+            "orbit_pass": str(rng.choice(["ASCENDING", "DESCENDING"])), "platforms": "S1A",
+            "n_dates": len(dates), "gap_median_days": float(np.median(gaps)), "gap_max_days": int(gaps.max()),
+            "modis_burn_flag": int(rng.integers(0, 2))}
 
 
 def make_bradd_fixture(root: str | Path, n_per_split: int | Mapping[str, int] = 4,

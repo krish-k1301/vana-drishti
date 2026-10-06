@@ -3,16 +3,18 @@ import importlib.util
 import json
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pytest
 import torch
 
 from src import early_eval
 from src.config import load_config
-from src.evaluation.prefix_inference import cutoff_days, prefix_from_config, two_label_prefix
+from src.data.samples import load_sample
+from src.evaluation.early_records import event_mask
+from src.evaluation.prefix_inference import combine_intervals, prefix_from_config, prefix_inputs, valid_cutoffs
 from src.losses.build_loss import build_loss
 from src.models.build_model import build_model
 from src.training.module import ChangeDetectionModule
@@ -36,36 +38,82 @@ def plot_module():
 OUTPUTS = ("curves.csv", "events.csv", "latency.csv", "recall.csv", "false_alarms.csv", "summary.json")
 
 
+@pytest.fixture(scope="module", autouse=True)
+def single_thread() -> Iterator[None]:
+    """Run this module's tiny CPU models on one thread (much faster than oversubscribed BLAS threads)."""
+    threads = torch.get_num_threads()
+    torch.set_num_threads(1)
+    yield
+    torch.set_num_threads(threads)
+
+
 @pytest.fixture(scope="module", name="setup")
 def fixture_setup(tmp_path_factory: pytest.TempPathFactory) -> tuple[dict, Path, dict]:
-    """Dated fixture with forest negatives in validation and test, a dated run config and a random-weight ckpt."""
+    """Dated fixture, a dated run config and a random-weight checkpoint in ChangeDetectionModule layout."""
     tmp = tmp_path_factory.mktemp("early")
-    root = make_bradd_fixture(tmp / "dated", n_per_split={"train": 2, "validation": 4, "test": 4}, dated=True, seed=0)
+    root = make_bradd_fixture(tmp / "dated", n_per_split={"train": 2, "validation": 2, "test": 3}, dated=True, seed=0)
     cfg = load_config(REPO / "configs" / "smoke" / "utae_ce.yaml", [f"output.runs_dir={tmp / 'runs'}", *TINY_UTAE])
     data = load_config(REPO / "configs" / "data" / "dated_amazon.yaml",
                        [f"root={root}", f"stats_path={tmp / 'stats.pt'}", "num_workers=0"])
     cfg.update(data=data, experiment_name="smoke_early")
-    cfg["model"]["error_days_after"] = 0
+    cfg["model"].update(error_days_after=0, inclusive_end=True)
     torch.manual_seed(0)
     module = ChangeDetectionModule(build_model(cfg["model"]), build_loss(cfg["loss"]), cfg["optim"])
     ckpt = tmp / "random.ckpt"
     torch.save({"state_dict": module.state_dict()}, ckpt)
-    eval_cfg = load_config(REPO / "configs" / "eval" / "early.yaml", ["min_dates=28"])  # fewer cutoffs: fast on CPU
-    return cfg, ckpt, eval_cfg
+    # every fixture split has a non-event sample at position 1; SMOKE plumbing only, not a stable-forest claim
+    negatives = "false_alarms.negative_sampling_types=[forest, oldDeforest, herbaceous]"
+    overrides = [f"min_dates={few_cutoffs(root)}", negatives, "cutoff_batch_size=16"]
+    return cfg, ckpt, load_config(REPO / "configs" / "eval" / "early.yaml", overrides)
+
+
+def few_cutoffs(root: Path, n_cutoffs: int = 2) -> int:
+    """min_dates leaving about `n_cutoffs` cutoffs for the shortest sample (keeps the CPU test fast)."""
+    shortest = min(len(load_sample(path)["image_dates"]) for path in (root / "Samples").glob("*.pt"))
+    return shortest - n_cutoffs + 1
 
 
 def test_prefix_inputs_are_causal(setup: tuple[dict, Path, dict]) -> None:
-    """Every prefix passed to the model ends at its cutoff, and cutoffs respect min_dates."""
-    cfg, _, eval_cfg = setup
+    """Every prefix ends at its cutoff with the training label grid (every L days back from t_c)."""
+    cfg, ckpt, eval_cfg = setup
     data_cfg = early_eval.eval_data_config(cfg)
-    dataset = early_eval.build_dataset(data_cfg, "test")
-    item = dataset[0]
-    cutoffs = cutoff_days(item, cfg["model"]["error_days_before"], eval_cfg["min_dates"])
-    assert len(cutoffs) > 0 and np.all(cutoffs > int(item["TargetDays"][0]))
+    item = early_eval.build_dataset(data_cfg, "test")[0]
+    model = early_eval.load_model(cfg, ckpt)
     prefix = prefix_from_config(data_cfg)
+    cutoffs = valid_cutoffs(model, item, prefix, eval_cfg["min_dates"])
+    assert len(cutoffs) > 0 and int((item["ImageDays"] <= cutoffs[0]).sum()) >= eval_cfg["min_dates"]
+    step = data_cfg["prefix_truncation"]["label_interval_days"]
     for cutoff in cutoffs[:3]:
-        inputs = two_label_prefix(item, prefix, int(cutoff))
-        assert int(inputs["ImageDays"].max()) == cutoff and inputs["TargetDays"].tolist()[1] == cutoff
+        inputs = prefix_inputs(item, prefix, int(cutoff))
+        days = inputs["TargetDays"].tolist()
+        assert int(inputs["ImageDays"].max()) == cutoff == days[-1] and len(days) >= 2
+        assert all(b - a == step for a, b in zip(days[1:-1], days[2:]))
+
+
+def test_combine_intervals_noisy_or_and_max() -> None:
+    """noisy-OR = 1 - prod(1 - p); max = max p; invalid intervals contribute nothing."""
+    probs = torch.tensor([0.5, 0.5, 0.9]).view(1, 3, 1, 1)
+    valid = torch.tensor([[1.0, 1.0, 0.0]])
+    assert float(combine_intervals(probs, valid, "noisy_or")) == pytest.approx(0.75)
+    assert float(combine_intervals(probs, valid, "max")) == pytest.approx(0.5)
+    with pytest.raises(ValueError):
+        combine_intervals(probs, valid, "mean")
+
+
+def test_event_mask_excludes_prior_clearing() -> None:
+    """Pixels already cleared at label[0] are not part of the event."""
+    targets = torch.zeros((2, 2, 2), dtype=torch.long)
+    targets[0, 0, 0] = 1
+    item = {"EventMask": torch.ones((2, 2), dtype=torch.uint8), "Targets": targets}
+    assert event_mask(item).tolist() == [[False, True], [True, True]]
+
+
+def test_missing_inclusive_end_fails_clearly(setup: tuple[dict, Path, dict]) -> None:
+    """The window settings are read from the run config; a missing key is an error, not a default."""
+    cfg, _, _ = setup
+    model_cfg = {k: v for k, v in cfg["model"].items() if k != "inclusive_end"}
+    with pytest.raises(KeyError, match="inclusive_end"):
+        early_eval.model_window({**cfg, "model": model_cfg})
 
 
 def test_early_eval_end_to_end(setup: tuple[dict, Path, dict], tmp_path: Path, monkeypatch) -> None:
@@ -76,7 +124,8 @@ def test_early_eval_end_to_end(setup: tuple[dict, Path, dict], tmp_path: Path, m
     monkeypatch.setattr(early_eval, "build_dataset", lambda d, p: phases.append(p) or real_build(d, p))
     monkeypatch.setattr(early_eval, "choose_tau", lambda *a: seen_at_tau.extend(phases) or real_choose(*a))
     summary = early_eval.run(cfg, str(ckpt), eval_cfg, tmp_path)
-    assert seen_at_tau == ["validation"] and summary["tau_split"] == "validation"
+    assert seen_at_tau == ["validation"] and summary["tau_source"] == "validation"
+    assert summary["interval_combiner"] == "noisy_or" and summary["model_inclusive_end"] is True
     for name in OUTPUTS:
         assert (tmp_path / name).is_file(), name
     assert summary["label"] == "SMOKE" and summary["n_events"] > 0

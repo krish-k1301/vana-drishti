@@ -25,11 +25,12 @@ from src.training.run import (SMOKE_LABEL, best_checkpoint, build_trainer, monit
 
 UPSTREAM_MONITOR = "StoppingScore/Epoch"  # run_via_parser.py: EarlyStopping / ModelCheckpoint monitor
 UPSTREAM_FIXED = {  # values hard-coded upstream (Network, LTAE2d, Experiment); config must agree
-    "model.error_days_before": 30, "model.error_days_after": 30,
+    "model.error_days_before": 30, "model.error_days_after": 30, "model.inclusive_end": False,
     f"model.params.{POSITIONAL_PERIOD_KEY}": 1000, "optim.name": "adamw", "optim.betas": [0.9, 0.999],
     "optim.eps": 1.0e-8, "optim.scheduler.mode": "max", "optim.scheduler.factor": 0.1,
     "optim.scheduler.threshold": 1.0e-4, "optim.scheduler.threshold_mode": "rel",
     "optim.scheduler.cooldown": 0, "optim.scheduler.min_lr": 0.0, "model.name": "utae",
+    "train.init_checkpoint": None, "train.validation_prefix": "none",
 }
 UPSTREAM_LOSS_NAMES = {"cross_entropy": "CrossEntropy", "focal": "FocalLoss"}
 

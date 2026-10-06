@@ -1,8 +1,9 @@
 """Per-event and per-pixel records from sliding-prefix probabilities (PRD 3, 7 Phase 5).
 
 Reference days (all on the sample's day-offset origin, NaN = none):
-- `deter`: the DETER alert day `EventDay`, for the event and for every event-mask pixel.
+- `deter`: the DETER alert day `EventDay`, for the event and for every event pixel (NaN outside Brazil).
 - `burn` / `radd`: per pixel `BurnDay` / `RaddDay`; per event the earliest such day inside the event mask.
+Event pixels are `EventMask` minus `label[0]` (pre-existing clearing at the first label date).
 Strata: DETER stage (class name mapped by the eval config), size bin of the event mask (event: total mask
 area; pixel: its 8-connected component), and edge vs interior of the event mask (pixels only).
 """
@@ -30,6 +31,11 @@ def earliest(values: np.ndarray) -> float:
     return float(np.nanmin(valid)) if np.isfinite(valid).any() else float("nan")
 
 
+def event_mask(item: dict) -> np.ndarray:
+    """Event pixels [H, W] bool: `EventMask` minus pixels already cleared at the first label (`label[0]`)."""
+    return item["EventMask"].numpy().astype(bool) & (item["Targets"][0].numpy() == 0)
+
+
 class EarlyCollector:
     """Accumulates curves, event rows, event curves and per-pixel detections for a fixed tau."""
 
@@ -52,9 +58,9 @@ class EarlyCollector:
 
     def add(self, item: dict, meta_row: pd.Series, cutoffs: np.ndarray, probs: np.ndarray) -> None:
         """Add one test event: item from DatedDataset, its meta row, cutoffs [K] and probabilities [K, H, W]."""
-        mask = item["EventMask"].numpy().astype(bool)
-        event_day = float(item["EventDay"])
-        stage = self.stages.get(meta_row["deter_class"], meta_row["deter_class"] or "none")
+        mask = event_mask(item)
+        event_day = float(days_or_nan(item["EventDay"].numpy()))
+        stage = self.stages.get(meta_row.get("deter_class", ""), meta_row.get("deter_class", "") or "none")
         inside = probs[:, mask]
         curves = {"mean": inside.mean(axis=1), "max": inside.max(axis=1)}
         base = {"index": int(item["Index"]), "file": meta_row["file"], "stage": stage}

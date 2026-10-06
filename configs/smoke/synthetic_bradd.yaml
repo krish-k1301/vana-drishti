@@ -4,4 +4,5 @@ smoke: true
 synthetic:
   root: data/synthetic_bradd   # gitignored (/data/)
   n_per_split: {train: 500, validation: 100, test: 100}
+  dated: false
   seed: 0

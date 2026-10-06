@@ -1,0 +1,8 @@
+# Phase 6 cross-biome transfer (PRD 7 Phase 6): Amazon-trained weights applied unchanged to a Congo or Borneo
+# dated set (GEE export, Hansen labels, RADD dates). Used by src.cross_biome.
+base: early.yaml
+recall_reference: radd      # no DETER outside Brazil: recall at RADD date + offsets
+target_data:                # overrides of the run's (Amazon) data section; stats_path is NOT overridden, so the
+                            # Amazon train-split normalisation is kept (weights and preprocessing unchanged)
+  root: data/dated_congo    # Phase 6 GEE export in BraDD format (not yet produced); data/dated_borneo for Borneo
+  split_column: dated_set

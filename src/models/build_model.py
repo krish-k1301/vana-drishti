@@ -19,7 +19,7 @@ UTAE_KEYS = (
     "agg_mode", "encoder_norm", "n_head", "d_model", "d_k", "pad_value", "padding_mode",
 )
 POSITIONAL_PERIOD_KEY = "positional_encoding_period"
-_REQUIRED_MODEL_KEYS = ("name", "forward_type", "error_days_before", "error_days_after", "params")
+_REQUIRED_MODEL_KEYS = ("name", "forward_type", "error_days_before", "error_days_after", "inclusive_end", "params")
 
 
 def _check_keys(cls: type, params: dict, required: tuple[str, ...]) -> None:
@@ -101,4 +101,6 @@ def build_model(cfg: dict) -> nn.Module:
     if cfg["forward_type"] != "segment":
         raise ValueError(f"forward_type '{cfg['forward_type']}' not supported; only 'segment'")
     backbone = build_backbone(cfg["name"], cfg["params"])
-    return SegmentNetwork(backbone, cfg["error_days_before"], cfg["error_days_after"])
+    if not isinstance(cfg["inclusive_end"], bool):
+        raise ValueError(f"model.inclusive_end must be true or false, got {cfg['inclusive_end']!r}")
+    return SegmentNetwork(backbone, cfg["error_days_before"], cfg["error_days_after"], cfg["inclusive_end"])

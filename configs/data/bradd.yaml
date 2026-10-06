@@ -15,6 +15,24 @@ max_samples:                     # null = all rows; small ints only for SMOKE ru
   validation: null
   test: null
 
+per_region_norm:                 # PRD 4.3 (SN-TUNet); replaces the global Z-score when enabled
+  enabled: false
+  region_column: state           # Brazilian state in BraDD meta.csv
+  stats_path: data/BraDD-S1TS/vanadrishti_close_train_region_stats.pt
+  unseen_region: global          # global | self | error, for regions without train rows
+  self_normalise_regions: []     # regions always normalised from their own (unlabelled) images
+seasonal_window:                 # PRD 4.3; filters images only, labels intact; applied before temporal_subsample
+  enabled: false
+  start: "06-01"                 # MM-DD; start > end wraps the year end
+  end: "10-31"
+  on_empty: error                # error | skip (skip drops such samples when the dataset is built)
+crop:                            # PRD Phase 6 smaller patches
+  enabled: false
+  size: 32                       # 32 | 16
+  mode: center                   # center | random (train only; center elsewhere) | tile (48/16 -> 9 disjoint, 48/32 -> 4 overlapping corners)
+  input_size: 48
+label_source: prodes             # prodes (sample key `label`) | hansen (`label_hansen`); or {train: .., validation: .., test: ..}
+
 # Phase 0 read-only inspection (scripts/inspect_bradd.py).
 inspect:
   out_dir: results/phase0_inspection
