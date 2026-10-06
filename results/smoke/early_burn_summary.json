@@ -1,0 +1,48 @@
+{
+  "label": "SMOKE",
+  "smoke": true,
+  "experiment_name": "smoke_early_burn",
+  "source": "src.early_eval",
+  "checkpoint": "results/runs/smoke_early_burn/checkpoints/best-epoch1.ckpt",
+  "tau_source": "validation",
+  "tau": 0.9998800158500671,
+  "false_alarms": [
+    {
+      "split": "validation",
+      "unit": "components",
+      "tau": 0.9998800158500671,
+      "budget_per_km2_month": 0.5,
+      "n_patches": 10,
+      "n_skipped": 0,
+      "n_alarms": 16,
+      "area_km2": 2.3040000000000003,
+      "mean_months": 14.409856262833674,
+      "rate_per_km2_month": 0.48192322794750975
+    },
+    {
+      "split": "test",
+      "unit": "components",
+      "tau": 0.9998800158500671,
+      "budget_per_km2_month": 0.5,
+      "n_patches": 18,
+      "n_skipped": 0,
+      "n_alarms": 11,
+      "area_km2": 4.147200000000001,
+      "mean_months": 14.713210130047912,
+      "rate_per_km2_month": 0.18027282638285846
+    }
+  ],
+  "n_events": 33,
+  "n_events_without_cutoffs": 0,
+  "interval_grid": "prefix_at label days ending at t_c",
+  "label_interval_days": 30,
+  "interval_combiner": "noisy_or",
+  "model_error_days_before": 30,
+  "model_error_days_after": 0,
+  "model_inclusive_end": true,
+  "min_dates": 4,
+  "event_curve": "mean",
+  "persist_k": 1,
+  "recall_reference": "deter",
+  "mmu": "MMU 0.01 ha (1 px of 10 m, 8-connected components)"
+}

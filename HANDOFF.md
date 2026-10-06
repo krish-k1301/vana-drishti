@@ -63,7 +63,7 @@ Notes on the environment:
 | 2 Benchmark suite | PARTIAL (SMOKE done, no GPU/data) | Tier A (ConvLSTM, ConvGRU, 3D-UNet, U-TAE seq2seq) and Tier B/C (TSViT, Exchanger+U-Net, Galileo nano WORKING; AnySat code works but weights BLOCKED). SMOKE benchmark of 8 models + U-TAE temporal-depth ablation done: `results/smoke/benchmark_smoke.csv`, `.png`, `ablation_utae_*.csv`. SMOKE configs `configs/smoke/bench_*.yaml` (convlstm/convgru/galileo train on 250 samples, exchanger on 100 with batch 1 — 14 GB RAM OOM at batch 4; all noted in the configs). |
 | 3 Dated Amazon dataset | PARTIAL (no EE creds) | Full GEE pipeline in `gee/`, tested with mocked `ee`; CLI exits 2 "BLOCKED: no Earth Engine credentials". DETER/PRODES download script written, never reached the server. |
 | 4 Prefix-truncation training | PARTIAL (SMOKE done, no dated data) | `src/data/prefix.py` (fixed after review), `configs/early/utae_prefix_{deter,burn}.yaml`. SMOKE runs on the fixed code done: `results/smoke/smoke_early_{deter,burn}_metrics_test.csv`. On the dated set the `label[0] OR pred` rule inflates IoU (cumulative labels keep 1→1 pixels): 0.92 with OR vs ~0.00 without after 2 epochs. **Report the without-OR numbers for Phases 4–6.** Checkpoints are in gitignored `results/runs/smoke_early_*/checkpoints/` (regenerate if missing: `python -m src.train --config configs/smoke/early_deter.yaml`, ~9 min on 4 CPU cores). |
-| 5 Early-detection eval | CODE DONE, SMOKE run is next | `src/early_eval.py` (sliding prefix, noisy-OR over 30-day intervals, tau on validation at a false-alarm budget, latency vs DETER/burn/RADD, recall at +0/12/24/48/90 d, splits by stage/size/edge), `scripts/plot_early.py`. |
+| 5 Early-detection eval | PARTIAL (SMOKE done, no dated data) | SMOKE early_eval on both Phase 4 checkpoints: `results/smoke/early_{deter,burn}_*` (summary, latency, recall, false alarms, plots). The 2-epoch SMOKE model detects 0/33 events (pipeline check only). Note: with noisy-OR over ~14 monthly intervals the validation-chosen tau was ~0.9999 — noisy-OR saturates on long windows; compare `interval_combiner: max` on real data. | `src/early_eval.py` (sliding prefix, noisy-OR over 30-day intervals, tau on validation at a false-alarm budget, latency vs DETER/burn/RADD, recall at +0/12/24/48/90 d, splits by stage/size/edge), `scripts/plot_early.py`. |
 | 6 Cross-biome | CODE DONE, no runs | `src/cross_biome.py`, `src/label_decomposition.py`, GEE configs for Congo/Borneo pilots, per-region norm / crop / label-source switches in `src/data/`. |
 
 ### SMOKE results so far (synthetic data, 500/100/100 samples, 2 CPU epochs; they reproduce nothing)
@@ -88,8 +88,9 @@ Regenerate: `python -m src.smoke_data --config configs/smoke/synthetic_bradd.yam
 1. ~~Phase 4 SMOKE~~ done (and the mixed-label-count test exists: `tests/test_train_intervals.py`).
    If `data/synthetic_dated` or the checkpoints are missing locally, regenerate:
    `python -m src.smoke_data --config configs/smoke/synthetic_dated.yaml`, then the two `src.train` commands.
-2. **Phase 5 SMOKE**: `python -m src.early_eval --config configs/smoke/early_deter.yaml --checkpoint <best ckpt>`
-   then `python scripts/plot_early.py --early-dir <out>`. Same for burn.
+2. ~~Phase 5 SMOKE~~ done (`results/smoke/early_*`). Command used:
+   `python -m src.early_eval --config results/runs/smoke_early_deter/config_resolved.yaml --checkpoint <best ckpt>`
+   then `python scripts/plot_early.py --early-dir results/runs/smoke_early_deter/early_eval` (~7.5 min each on CPU).
 3. ~~Phase 2 SMOKE~~ done (`results/smoke/`). `src.evaluate` now applies `trainer.float32_matmul_precision` so its
    counts match the test pass inside `src.train` exactly.
 4. **Phase 6 SMOKE**: `src.cross_biome` on a copy of the synthetic dated set with DETER/burn keys stripped, and

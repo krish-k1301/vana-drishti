@@ -1,0 +1,43 @@
+label,experiment_name,reference,level,stratum_type,stratum,n,n_no_reference,n_detected,n_missed,median,q25,q75,iqr,mean
+SMOKE,smoke_early_burn,deter,event,all,all,33,0,10,23,117.0,116.0,121.75,5.75,117.2
+SMOKE,smoke_early_burn,deter,event,stage,burn_scar,6,0,1,5,118.0,118.0,118.0,0.0,118.0
+SMOKE,smoke_early_burn,deter,event,stage,exposed_soil,17,0,6,11,116.0,113.75,117.5,3.75,115.16666666666667
+SMOKE,smoke_early_burn,deter,event,stage,vegetation_remaining,10,0,3,7,123.0,119.5,123.5,4.0,121.0
+SMOKE,smoke_early_burn,deter,event,size_bin,0.5-2 ha,28,0,8,20,117.0,115.25,119.5,4.25,116.625
+SMOKE,smoke_early_burn,deter,event,size_bin,>2 ha,5,0,2,3,119.5,117.75,121.25,3.5,119.5
+SMOKE,smoke_early_burn,burn,event,all,all,18,15,6,12,67.5,47.75,76.75,29.0,65.16666666666667
+SMOKE,smoke_early_burn,burn,event,stage,burn_scar,6,0,1,5,94.0,94.0,94.0,0.0,94.0
+SMOKE,smoke_early_burn,burn,event,stage,exposed_soil,12,5,5,7,62.0,43.0,73.0,30.0,59.4
+SMOKE,smoke_early_burn,burn,event,stage,vegetation_remaining,0,10,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_burn,burn,event,size_bin,0.5-2 ha,16,12,5,11,73.0,43.0,78.0,35.0,65.8
+SMOKE,smoke_early_burn,burn,event,size_bin,>2 ha,2,3,1,1,62.0,62.0,62.0,0.0,62.0
+SMOKE,smoke_early_burn,radd,event,all,all,33,0,10,23,103.5,94.75,107.0,12.25,99.1
+SMOKE,smoke_early_burn,radd,event,stage,burn_scar,6,0,1,5,93.0,93.0,93.0,0.0,93.0
+SMOKE,smoke_early_burn,radd,event,stage,exposed_soil,17,0,6,11,103.5,100.75,106.25,5.5,97.83333333333333
+SMOKE,smoke_early_burn,radd,event,stage,vegetation_remaining,10,0,3,7,112.0,96.5,115.0,18.5,103.66666666666667
+SMOKE,smoke_early_burn,radd,event,size_bin,0.5-2 ha,28,0,8,20,101.5,90.0,107.0,17.0,96.125
+SMOKE,smoke_early_burn,radd,event,size_bin,>2 ha,5,0,2,3,111.0,107.5,114.5,7.0,111.0
+SMOKE,smoke_early_burn,deter,pixel,all,all,4582,0,1310,3272,116.0,113.0,120.0,7.0,116.81221374045802
+SMOKE,smoke_early_burn,deter,pixel,stage,burn_scar,757,0,159,598,118.0,116.0,118.0,2.0,117.13207547169812
+SMOKE,smoke_early_burn,deter,pixel,stage,exposed_soil,2249,0,838,1411,116.0,113.0,124.0,11.0,116.75059665871122
+SMOKE,smoke_early_burn,deter,pixel,stage,vegetation_remaining,1576,0,313,1263,116.0,113.0,120.0,7.0,116.814696485623
+SMOKE,smoke_early_burn,deter,pixel,size_bin,0.5-2 ha,3258,0,994,2264,118.0,113.0,123.0,10.0,116.93561368209255
+SMOKE,smoke_early_burn,deter,pixel,size_bin,>2 ha,1324,0,316,1008,116.0,113.0,116.0,3.0,116.42405063291139
+SMOKE,smoke_early_burn,deter,pixel,edge_interior,edge,2903,0,639,2264,118.0,114.0,121.0,7.0,117.1830985915493
+SMOKE,smoke_early_burn,deter,pixel,edge_interior,interior,1679,0,671,1008,116.0,113.0,119.0,6.0,116.45901639344262
+SMOKE,smoke_early_burn,burn,pixel,all,all,2146,2436,830,1316,62.0,53.0,78.0,25.0,67.06265060240963
+SMOKE,smoke_early_burn,burn,pixel,stage,burn_scar,757,0,159,598,94.0,91.0,100.0,9.0,95.76729559748428
+SMOKE,smoke_early_burn,burn,pixel,stage,exposed_soil,1389,860,671,718,62.0,43.0,73.0,30.0,60.26080476900149
+SMOKE,smoke_early_burn,burn,pixel,stage,vegetation_remaining,0,1576,0,0,nan,nan,nan,nan,nan
+SMOKE,smoke_early_burn,burn,pixel,size_bin,0.5-2 ha,1628,1630,657,971,73.0,43.0,78.0,35.0,68.3455098934551
+SMOKE,smoke_early_burn,burn,pixel,size_bin,>2 ha,518,806,173,345,62.0,62.0,62.0,0.0,62.190751445086704
+SMOKE,smoke_early_burn,burn,pixel,edge_interior,edge,1382,1521,384,998,73.0,53.0,91.0,38.0,69.82291666666667
+SMOKE,smoke_early_burn,burn,pixel,edge_interior,interior,764,915,446,318,62.0,53.0,73.0,20.0,64.68609865470852
+SMOKE,smoke_early_burn,radd,pixel,all,all,4582,0,1310,3272,104.0,93.0,107.0,14.0,99.12671755725191
+SMOKE,smoke_early_burn,radd,pixel,stage,burn_scar,757,0,159,598,93.0,93.0,109.0,16.0,97.34591194968553
+SMOKE,smoke_early_burn,radd,pixel,stage,exposed_soil,2249,0,838,1411,104.0,93.0,107.0,14.0,98.09546539379475
+SMOKE,smoke_early_burn,radd,pixel,stage,vegetation_remaining,1576,0,313,1263,108.0,102.0,108.0,6.0,102.7923322683706
+SMOKE,smoke_early_burn,radd,pixel,size_bin,0.5-2 ha,3258,0,994,2264,100.0,92.0,107.0,15.0,96.43561368209255
+SMOKE,smoke_early_burn,radd,pixel,size_bin,>2 ha,1324,0,316,1008,104.0,104.0,108.0,4.0,107.59177215189874
+SMOKE,smoke_early_burn,radd,pixel,edge_interior,edge,2903,0,639,2264,103.0,93.0,107.0,14.0,98.69953051643192
+SMOKE,smoke_early_burn,radd,pixel,edge_interior,interior,1679,0,671,1008,104.0,93.0,107.0,14.0,99.53353204172876
