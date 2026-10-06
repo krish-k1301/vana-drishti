@@ -9,7 +9,8 @@ import pandas as pd
 import torch
 
 DATED_KEYS = {"event_date": None, "deter_class": None, "burn_month": torch.int16, "radd_date": torch.int32,
-              "prodes_year": None, "polygon_area_ha": None, "event_mask": torch.uint8, "region_block": None}
+              "prodes_year": None, "polygon_area_ha": None, "event_mask": torch.uint8, "region_block": None,
+              "ref_day": torch.int32, "label_hansen": torch.int64}
 
 
 def _in_range_fraction(values: np.ndarray, bounds: list[float]) -> float:
@@ -36,6 +37,7 @@ def check_format(sample: dict) -> bool:
                 and len(sample.get("label_dates", [])) == label.shape[0] >= 2)
     dates_ok = all(isinstance(d, dt.date) for d in sample.get("image_dates", []) + sample.get("label_dates", []))
     keys_ok = all(k in sample and (t is None or sample[k].dtype == t) for k, t in DATED_KEYS.items())
+    keys_ok = keys_ok and sample["label_hansen"].shape == label.shape and sample["ref_day"].shape == label.shape[1:]
     return bool(shape_ok and dates_ok and keys_ok)
 
 

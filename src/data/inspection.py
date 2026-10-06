@@ -147,3 +147,15 @@ def markdown_table(df: pd.DataFrame, max_rows: int | None = None) -> str:
     if max_rows is not None and len(df) > max_rows:
         lines.append(f"\n({len(df) - max_rows} more rows in the CSV)")
     return "\n".join(lines)
+
+
+def compare_shipped_stats(shipped: Mapping, ours: Mapping) -> pd.DataFrame:
+    """Per-channel mean/std of a shipped stats file next to ours, with absolute differences."""
+    rows = []
+    for c, name in enumerate(CHANNELS):
+        row = {"channel": name}
+        for key in ("mean", "std"):
+            theirs, mine = float(torch.as_tensor(shipped[key])[c]), float(torch.as_tensor(ours[key])[c])
+            row.update({f"shipped_{key}": theirs, f"ours_{key}": mine, f"abs_diff_{key}": abs(theirs - mine)})
+        rows.append(row)
+    return pd.DataFrame(rows)

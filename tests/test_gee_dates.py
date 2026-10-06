@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from gee.dates import (NO_DATE, Window, compute_window, decode_radd_yyddd, encode_yyddd, first_burn_day,
-                       from_days, monthly_label_dates, revisit_stats, to_days)
+                       from_days, monthly_label_dates, revisit_stats, to_days, year_end_days)
 
 
 def test_window_offsets_and_length():
@@ -43,14 +43,28 @@ def test_radd_encode_decode_round_trip():
         assert decode_radd_yyddd(np.array([encode_yyddd(day)]))[0] == to_days(day)
 
 
-def test_first_burn_day_takes_first_month_inside_window():
+def test_burn_day_is_last_day_of_first_month_and_pre_window_months_are_pre_existing():
     window = Window(dt.date(2020, 6, 15), dt.date(2021, 10, 13))
     monthly = {2020: np.array([[5, 7], [0, 6]]), 2021: np.array([[8, 3], [11, 0]])}
     days = first_burn_day(monthly, window)
-    assert days[0, 0] == to_days(dt.date(2021, 8, 1))
-    assert days[0, 1] == to_days(dt.date(2020, 7, 1))
+    pre_existing = to_days(window.start) - 1
+    assert days[0, 0] == pre_existing
+    assert days[0, 1] == to_days(dt.date(2020, 7, 31))
     assert days[1, 0] == NO_DATE
-    assert days[1, 1] == to_days(dt.date(2020, 6, 1))
+    assert days[1, 1] == pre_existing
+
+
+def test_burn_day_never_precedes_the_burn():
+    window = Window(dt.date(2020, 1, 1), dt.date(2021, 12, 31))
+    for month in range(1, 13):
+        day = first_burn_day({2021: np.array([month])}, window)[0]
+        last_possible = (dt.date(2021, month % 12 + 1, 1) if month < 12 else dt.date(2022, 1, 1)) - dt.timedelta(1)
+        assert from_days(int(day)) == last_possible
+
+
+def test_year_end_days():
+    days = year_end_days(np.array([2022, 0, 2020]))
+    assert days.tolist() == [to_days(dt.date(2022, 12, 31)), NO_DATE, to_days(dt.date(2020, 12, 31))]
 
 
 def test_revisit_stats_gaps():

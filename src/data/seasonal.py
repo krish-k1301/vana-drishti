@@ -59,9 +59,11 @@ class SeasonalWindow:
 
 def build_seasonal_window(spec: Mapping | None) -> SeasonalWindow | None:
     """SeasonalWindow from a config block, or None if the block is absent or disabled."""
-    if not spec or not spec.get("enabled", False):
+    if spec is None:
         return None
     missing = [k for k in SPEC_KEYS if k not in spec]
     if missing:
         raise KeyError(f"seasonal_window needs keys {missing}")
+    if not spec["enabled"]:
+        return None
     return SeasonalWindow(spec["start"], spec["end"], spec["on_empty"])

@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 
 import yaml
 
 REQUIRED_SECTIONS = ("name", "region_label", "placeholder_prefix", "paths", "s1", "window", "grid", "events",
-                     "labels", "negatives", "split", "modes", "export", "qa")
+                     "labels", "negatives", "split", "modes", "export", "qa", "states")
 HASHED_SECTIONS = ("s1", "window", "grid", "events", "labels")
 MODES = ("pilot", "full")
 
@@ -23,7 +24,15 @@ def load_config(path: str) -> dict:
     for mode in MODES:
         if mode not in cfg["modes"]:
             raise KeyError(f"config {path} has no modes.{mode} section")
+    check_spacing(cfg)
     return cfg
+
+
+def check_spacing(cfg: dict) -> None:
+    """Require min_center_distance_m >= patch diagonal, so two kept square patches can never overlap."""
+    diagonal = cfg["grid"]["patch_size"] * cfg["grid"]["pixel_size_m"] * math.sqrt(2.0)
+    if cfg["split"]["min_center_distance_m"] < diagonal:
+        raise ValueError(f"split.min_center_distance_m must be >= the patch diagonal ({diagonal:.0f} m)")
 
 
 def config_hash(cfg: dict) -> str:

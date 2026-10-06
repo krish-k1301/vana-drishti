@@ -9,6 +9,7 @@ import pytest
 import torch
 
 from src.data import BraDDDataset, TemporalSubsample, build_dataloaders
+from tests.fixtures import data_config
 
 UPSTREAM = Path(__file__).resolve().parents[1] / "third_party" / "bradd_s1ts"
 
@@ -80,7 +81,7 @@ def test_invalid_arguments():
 
 def test_workers_reseed_random_mode(bradd_root):
     """Random subsampling with worker processes is reproducible across runs."""
-    cfg = {"root": str(bradd_root), "split_column": "close_set", "normalization": "none", "batch_size": 2,
-           "num_workers": 2, "seed": 7, "temporal_subsample": {"mode": "random", "num_dates": 4}}
+    cfg = data_config("bradd", root=str(bradd_root), normalization="none", batch_size=2, num_workers=2, seed=7,
+                      temporal_subsample={"mode": "random", "num_dates": 4, "at_test": False})
     runs = [[b["ImageDays"].tolist() for b in build_dataloaders(cfg)["train"]] for _ in range(2)]
     assert runs[0] == runs[1]

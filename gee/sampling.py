@@ -6,6 +6,8 @@ import hashlib
 import math
 
 import numpy as np
+import shapely
+from shapely.geometry import Point, shape
 
 SPLITS = ("train", "validation", "test")
 EARTH_RADIUS_M = 6_371_000.0
@@ -99,3 +101,15 @@ def parse_sample_points(info: dict, class_band: str, extra_band: str | None = No
             point["extra"] = props.get(extra_band, 0)
         points.append(point)
     return points
+
+
+def names_at(lons: list[float], lats: list[float], info: dict, name_property: str, fallback: str) -> list[str]:
+    """Name of the first polygon feature containing each point (fallback when none does)."""
+    polygons = [(shape(f["geometry"]), str(f["properties"][name_property])) for f in info.get("features", [])]
+    for geom, _ in polygons:
+        shapely.prepare(geom)
+    names = []
+    for lon, lat in zip(lons, lats):
+        point = Point(lon, lat)
+        names.append(next((name for geom, name in polygons if geom.contains(point)), fallback))
+    return names

@@ -1,11 +1,15 @@
 """DatedDataset extra keys and PrefixTruncation semantics on the synthetic dated fixture."""
 from __future__ import annotations
 
+import datetime as dt
+
 import pytest
 import torch
 
 from src.data import DatedDataset, PrefixTruncation, build_dataloaders, collate_batch
+from src.data.prefix import reference_days
 from src.data.samples import EPOCH
+from tests.fixtures import data_config
 
 
 def _positive_index(ds: DatedDataset) -> int:
@@ -70,9 +74,8 @@ def test_random_cutoff_respects_min_dates(dated_root):
 
 def test_dated_loader_collates_variable_labels(dated_root, tmp_path):
     """Dated loader pads variable label counts; last label day = last image day."""
-    cfg = {"dataset": "dated", "root": str(dated_root), "split_column": "dated_set",
-           "stats_path": str(tmp_path / "d.pt"), "batch_size": 4, "num_workers": 0, "seed": 0,
-           "prefix_truncation": {"anchor": "deter", "min_dates": 4, "label_interval_days": 30, "phases": ["train"]}}
+    cfg = data_config("dated_amazon", root=str(dated_root), stats_path=str(tmp_path / "d.pt"), batch_size=4,
+                      num_workers=0, seed=0)
     batch = next(iter(build_dataloaders(cfg)["train"]))
     assert batch["EventDay"].shape == (4,) and batch["BurnDay"].shape == (4, 48, 48)
     assert batch["Targets"].shape[1] == batch["TargetDays"].shape[1]
@@ -89,3 +92,37 @@ def test_collate_pads_label_axis():
     batch = collate_batch(items)
     assert batch["TargetDays"].tolist() == [[1, 2, 0, 0], [1, 2, 3, 4]]
     assert batch["Targets"][0, 2:].sum() == 0 and batch["PadMask"].tolist()[0] == [False] * 3 + [True] * 2
+
+
+def test_ref_day_reproduces_stored_labels(dated_root):
+    """Deter-anchored labels rebuilt at a stored label day equal the stored mask, neighbour polygons included."""
+    ds = DatedDataset(dated_root, "train", normalization="none")
+    trunc = PrefixTruncation("deter", min_dates=1, label_interval_days=30, seed=0)
+    for i in range(len(ds)):
+        item = ds[i]
+        outside = (item["RefDay"] >= 0) & ~item["EventMask"].bool()
+        assert ds.meta.loc[i, "deter_class"] == "" or outside.any(), "positives carry a second polygon"
+        for k in range(1, len(item["TargetDays"])):
+            cut = trunc.prefix_at(item, int(item["TargetDays"][k]))
+            assert torch.equal(cut["Targets"][-1], item["Targets"][k])
+
+
+def test_burn_day_is_a_month_end(dated_root):
+    """Burn months are encoded as their last day, so BurnDay never precedes the end of the burn month."""
+    ds = DatedDataset(dated_root, "train", normalization="none")
+    for i in range(len(ds)):
+        raw = ds.load_raw(i)
+        for value in raw["burn_month"][raw["burn_month"] >= 0].unique().tolist():
+            day = EPOCH + dt.timedelta(days=int(value))
+            assert (day + dt.timedelta(days=1)).day == 1
+
+
+def test_derived_ref_day_without_key(dated_root):
+    """Without `ref_day` the dataset derives RefDay from EventDay/EventMask and the stored label onsets."""
+    ds = DatedDataset(dated_root, "train", normalization="none")
+    item = ds[0]
+    stripped = {k: v for k, v in item.items() if k != "RefDay"}
+    derived = reference_days(stripped)
+    stored_positive = item["Targets"][-1].bool() & ~item["Targets"][0].bool()
+    assert torch.equal(derived >= 0, stored_positive | (item["EventMask"].bool() & (item["EventDay"] >= 0)))
+    assert ((derived >= item["RefDay"]) | (derived < 0)).all(), "derived days are never earlier than RefDay"

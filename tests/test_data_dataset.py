@@ -6,6 +6,7 @@ import torch
 
 from src.data import BraDDDataset, build_dataloaders, collate_batch, compute_train_stats
 from src.data.samples import load_sample, read_meta
+from tests.fixtures import data_config
 
 
 def _raw_images(root, phase):
@@ -94,9 +95,9 @@ def test_collate_pads_end_and_masks(bradd_root):
 
 def test_build_dataloaders(bradd_root, tmp_path):
     """build_dataloaders returns three loaders with the configured sizes and seeded order."""
-    cfg = {"root": str(bradd_root), "split_column": "close_set", "stats_path": str(tmp_path / "s.pt"),
-           "normalization": "zscore", "batch_size": 3, "num_workers": 0, "seed": 42,
-           "temporal_subsample": {"mode": "random", "num_dates": 6}, "max_samples": {"train": 6}}
+    cfg = data_config("bradd", root=str(bradd_root), stats_path=str(tmp_path / "s.pt"), batch_size=3,
+                      num_workers=0, temporal_subsample={"mode": "random", "num_dates": 6, "at_test": False},
+                      max_samples={"train": 6, "validation": None, "test": None})
     loaders = build_dataloaders(cfg)
     assert set(loaders) == {"train", "validation", "test"}
     assert len(loaders["train"].dataset) == 6 and len(loaders["test"].dataset) == 4

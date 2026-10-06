@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 
 from src.data.bradd_dataset import BraDDDataset
-from src.data.prefix import PrefixTruncation
+from src.data.prefix import PrefixTruncation, reference_days
 from src.data.samples import epoch_days_to_offsets, sample_origin
 
 
@@ -14,7 +14,10 @@ class DatedDataset(BraDDDataset):
     """BraDDDataset over the dated meta (split column `dated_set`) with extra event keys.
 
     Extra item keys, all in days on the same origin as `ImageDays` (-1 = none):
-    `EventDay` [] (DETER date), `BurnDay` [H,W], `RaddDay` [H,W], plus `EventMask` uint8 [H,W].
+    `EventDay` [] (DETER date of the central polygon), `RefDay` [H,W] (DETER date of every label-class polygon,
+    from the sample key `ref_day`; derived from the stored labels when that key is absent, see
+    src.data.prefix.reference_days), `BurnDay` [H,W] (first burn month, encoded as its last day),
+    `RaddDay` [H,W], plus `EventMask` uint8 [H,W].
     If `prefix` is given, it is applied after normalisation (and after any temporal subsample);
     without it the stored labels are returned unchanged. The prefix rebuilds labels from DETER/burn
     event days, so it cannot be combined with `label_source='hansen'` (that would mix label sources).
@@ -35,7 +38,7 @@ class DatedDataset(BraDDDataset):
             self.prefix.reseed(seed + 1)
 
     def build_item(self, raw: dict, index: int) -> dict:
-        """Base item plus EventDay, BurnDay, RaddDay and EventMask."""
+        """Base item plus EventDay, RefDay, BurnDay, RaddDay and EventMask."""
         item = super().build_item(raw, index)
         origin = sample_origin(raw)
         shape = raw["label"].shape[-2:]
@@ -49,6 +52,8 @@ class DatedDataset(BraDDDataset):
         mask = raw.get("event_mask")
         mask = torch.zeros(shape) if mask is None else torch.as_tensor(mask)
         item["EventMask"] = mask.to(torch.uint8)
+        ref = raw.get("ref_day")
+        item["RefDay"] = reference_days(item) if ref is None else epoch_days_to_offsets(torch.as_tensor(ref), origin)
         return item
 
     def apply_transforms(self, item: dict, tile: int = 0) -> dict:

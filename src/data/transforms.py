@@ -66,10 +66,12 @@ class TemporalSubsample:
 
 
 def build_subsample(spec: TemporalSubsample | Mapping | None, seed: int) -> TemporalSubsample | None:
-    """Turn a config mapping {mode, num_dates} (or an instance, or None) into a transform."""
+    """Turn a config mapping with keys `mode` and `num_dates` (or an instance, or None) into a transform."""
     if spec is None or isinstance(spec, TemporalSubsample):
         return spec
-    mode = spec.get("mode", "none")
-    if mode == "none":
+    missing = [k for k in ("mode", "num_dates") if k not in spec]
+    if missing:
+        raise KeyError(f"temporal_subsample needs keys {missing}")
+    if spec["mode"] == "none":
         return None
-    return TemporalSubsample(mode, int(spec.get("num_dates", -1)), int(spec.get("seed", seed)))
+    return TemporalSubsample(spec["mode"], int(spec["num_dates"]), seed)

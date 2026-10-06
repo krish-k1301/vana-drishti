@@ -8,13 +8,13 @@ import geopandas as gpd
 import numpy as np
 from shapely import wkt
 
-from gee.dates import monthly_label_dates, parse_date, revisit_stats, to_days
+from gee.dates import monthly_label_dates, parse_date, revisit_stats
 from gee.decode import burn_days, hansen_lossyear, modis_flag, radd_days, s1_series
 from gee.grid import PatchGrid, rasterize
 from gee.spec import PatchSpec
 from gee.export import load_raw
-from gee.to_bradd import (build_sample, cumulative_labels, event_mask_near, hansen_reference, sample_file_name,
-                          save_sample, write_meta)
+from gee.to_bradd import (build_sample, cumulative_labels, hansen_reference, sample_file_name, save_sample,
+                          write_meta)
 from gee.vectors import filter_events, prior_mask, prodes_year_of, read_deter, read_prodes, reference_days
 
 ALL_DATES = (dt.date(1900, 1, 1), dt.date(2100, 1, 1))
@@ -33,7 +33,7 @@ def load_vectors(cfg: dict) -> Vectors:
     if cfg["events"]["source"] != "deter":
         return Vectors(None, None)
     deter = cfg["events"]["deter"]
-    events = read_deter(deter["path"], deter["date_attribute"], deter["class_attribute"], deter["state_attribute"])
+    events = read_deter(deter["path"], deter["date_attribute"], deter["class_attribute"])
     prodes_cfg = cfg["events"]["prodes"]
     return Vectors(filter_events(events, deter["label_classes"], *ALL_DATES),
                    read_prodes(prodes_cfg["path"], prodes_cfg["year_attribute"]))
@@ -52,15 +52,14 @@ def deter_labels(cfg: dict, spec: PatchSpec, grid: PatchGrid, vectors: Vectors) 
     return ref, prior, mask, prodes_year_of(vectors.prodes, polygon), spec.polygon_area_ha
 
 
-def hansen_labels(cfg: dict, spec: PatchSpec, grid: PatchGrid, bands: dict, radd: np.ndarray) -> tuple:
-    """(reference days, prior mask, event mask, PRODES year -1, area ha) from Hansen loss dated by RADD."""
-    window = spec.window(cfg["window"])
-    event_day = to_days(spec.event_date)
-    loss = hansen_lossyear(bands, (grid.size, grid.size))
-    ref, prior = hansen_reference(loss, radd, event_day, window, cfg["labels"]["hansen"]["base_year"])
+def hansen_labels(cfg: dict, spec: PatchSpec, grid: PatchGrid, loss: np.ndarray) -> tuple:
+    """(reference days, prior mask, event mask, PRODES year -1, area ha) from Hansen loss alone (no RADD)."""
+    base = cfg["labels"]["hansen"]["base_year"]
+    ref = hansen_reference(loss, base)
+    prior = np.zeros(ref.shape, dtype=bool)
     if not spec.is_positive:
-        return ref, prior, np.zeros(prior.shape, dtype=np.uint8), -1, 0.0
-    mask = event_mask_near(ref, event_day, cfg["events"]["event_slack_days"])
+        return ref, prior, np.zeros(ref.shape, dtype=np.uint8), -1, 0.0
+    mask = (loss == spec.event_date.year - base).astype(np.uint8)
     return ref, prior, mask, -1, float(mask.sum()) * grid.pixel_m ** 2 / 10_000.0
 
 
@@ -71,21 +70,24 @@ def convert_patch(cfg: dict, spec: PatchSpec, bands: dict, info: dict, vectors: 
     image, keep = s1_series(bands, len(dates), cfg["s1"]["polarisations"], cfg["s1"]["nodata"])
     if not keep:
         return "no_complete_s1_dates"
-    radd = radd_days(bands, window, cfg["labels"]["radd"]["base_year"])
+    loss = hansen_lossyear(bands, (grid.size, grid.size))
     if vectors.events is not None:
         ref, prior, mask, prodes_year, area = deter_labels(cfg, spec, grid, vectors)
     else:
-        ref, prior, mask, prodes_year, area = hansen_labels(cfg, spec, grid, bands, radd)
+        ref, prior, mask, prodes_year, area = hansen_labels(cfg, spec, grid, loss)
     label_dates = monthly_label_dates(window)
     label = cumulative_labels(ref, prior, label_dates)
     if spec.is_positive and not mask.any():
         return "positive_empty_event_mask"
     if not spec.is_positive and (label[-1] != label[0]).any():
         return "negative_has_change"
+    hansen_ref = hansen_reference(loss, cfg["labels"]["hansen"]["base_year"])
     extras = {"event_date": spec.event_date if spec.is_positive else None, "deter_class": spec.deter_class,
-              "burn_month": burn_days(bands, window, (grid.size, grid.size)), "radd_date": radd,
+              "burn_month": burn_days(bands, window, (grid.size, grid.size)),
+              "radd_date": radd_days(bands, window, cfg["labels"]["radd"]["base_year"]),
               "prodes_year": prodes_year, "polygon_area_ha": area, "event_mask": mask,
-              "region_block": spec.region_block}
+              "region_block": spec.region_block, "ref_day": ref,
+              "label_hansen": cumulative_labels(hansen_ref, np.zeros(ref.shape, dtype=bool), label_dates)}
     kept_dates = [dates[i] for i in keep]
     sample = build_sample(image, kept_dates, label_dates, label, extras)
     return sample, meta_row(spec, info, revisit_stats(kept_dates), modis_flag(bands))

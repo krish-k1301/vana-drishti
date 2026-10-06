@@ -8,10 +8,10 @@ import numpy as np
 from shapely.geometry import box
 
 from gee import labels
-from gee.dates import Window, decode_radd_yyddd, from_days, parse_date
+from gee.dates import Window, parse_date
 from gee.grid import area_ha, lonlat_bounds, make_grid
-from gee.sampling import (allocate_negatives, assign_block, block_name, parse_sample_points, sample_negative_dates,
-                          split_of_block, thin_by_distance)
+from gee.sampling import (allocate_negatives, assign_block, block_name, names_at, parse_sample_points,
+                          sample_negative_dates, split_of_block, thin_by_distance)
 from gee.spec import PatchSpec
 from gee.vectors import filter_events, read_deter
 
@@ -24,7 +24,7 @@ def period(cfg: dict) -> Window:
 def load_deter(cfg: dict) -> gpd.GeoDataFrame:
     """Read the local DETER file named in the config."""
     deter = cfg["events"]["deter"]
-    return read_deter(deter["path"], deter["date_attribute"], deter["class_attribute"], deter["state_attribute"])
+    return read_deter(deter["path"], deter["date_attribute"], deter["class_attribute"])
 
 
 def deter_positives(cfg: dict, events: gpd.GeoDataFrame, bbox: list[float]) -> list[PatchSpec]:
@@ -35,7 +35,7 @@ def deter_positives(cfg: dict, events: gpd.GeoDataFrame, bbox: list[float]) -> l
     for i, row in enumerate(chosen.itertuples()):
         centre = row.geometry.centroid
         specs.append(PatchSpec(f"{cfg['name']}_pos_{i:06d}", "positive", centre.x, centre.y, row.event_date,
-                               row.event_class, area_ha(row.geometry), row.state, "", "", i, i, row.geometry.wkt))
+                               row.event_class, area_ha(row.geometry), "", "", "", i, i, row.geometry.wkt))
     return specs
 
 
@@ -83,28 +83,41 @@ def drop_near_events(specs: list[PatchSpec], events: gpd.GeoDataFrame, cfg: dict
 
 
 def sample_points(cfg: dict, mode: dict, counts: dict[str, int], n_positive: int) -> list[dict]:
-    """Stratified-sample class points in Earth Engine (negatives, plus Hansen+RADD positives if requested)."""
+    """Stratified-sample class points in Earth Engine (negatives, plus Hansen-loss positives if requested)."""
     neg = cfg["negatives"]
     codes = labels.class_codes(neg)
     request = {codes[k]: v * neg["oversample"] for k, v in counts.items() if v > 0}
     if n_positive > 0:
         request[labels.POSITIVE_CODE] = n_positive * neg["oversample"]
-    image = labels.class_image(neg, cfg["labels"], period(cfg), n_positive > 0, mode["bbox"])
+    image = labels.class_image(neg, cfg["labels"], period(cfg), n_positive > 0)
     info = labels.sample_class_points(image, mode["bbox"], request, neg["sample_scale_m"], cfg["split"]["seed"],
                                       neg["tile_scale"])
-    return parse_sample_points(info, labels.CLASS_BAND, labels.RADD_DATE)
+    return parse_sample_points(info, labels.CLASS_BAND, labels.HANSEN_LOSS)
 
 
 def hansen_positives(cfg: dict, points: list[dict]) -> list[PatchSpec]:
-    """Positive specs from Hansen+RADD sampled points; event date = RADD date at the sampled centre."""
+    """Positive specs from Hansen-loss points; event date = 31 Dec of the centre pixel's loss year (causal-safe)."""
     chosen = [p for p in points if p["code"] == labels.POSITIVE_CODE]
-    days = decode_radd_yyddd(np.array([p["extra"] for p in chosen], dtype=np.int64),
-                             cfg["labels"]["radd"]["base_year"])
-    dates = [from_days(int(d)) for d in days]
+    base = cfg["labels"]["hansen"]["base_year"]
+    dates = [dt.date(base + int(p["extra"]), 12, 31) for p in chosen]
     specs = point_specs(cfg, chosen, "positive", dates, 0, cfg["events"]["positive_class_label"])
     for i, spec in enumerate(specs):
         spec.alert_idx = i
     return specs
+
+
+def assign_states(cfg: dict, specs: list[PatchSpec], bbox: list[float]) -> None:
+    """Set every spec's `state` from one polygon layer (same vocabulary for positives and negatives)."""
+    states = cfg["states"]
+    if states is None:
+        for spec in specs:
+            spec.state = cfg["region_label"]
+        return
+    info = labels.state_features(states, bbox)
+    names = names_at([s.lon for s in specs], [s.lat for s in specs], info, states["name_property"],
+                     cfg["region_label"])
+    for spec, name in zip(specs, names):
+        spec.state = name
 
 
 def negatives(cfg: dict, points: list[dict], positives: list[PatchSpec], counts: dict[str, int]) -> list[PatchSpec]:
@@ -135,4 +148,8 @@ def plan_patches(cfg: dict, mode: dict) -> list[PatchSpec]:
     if deter is not None:
         candidates = drop_near_events(candidates, deter, cfg)
     by_type = [shuffle_cap([s for s in candidates if s.sampling_type == k], n, seed) for k, n in counts.items()]
-    return positives + [s for group in by_type for s in group]
+    chosen = positives + [s for group in by_type for s in group]
+    spaced = [chosen[i] for i in thin_by_distance([s.lon for s in chosen], [s.lat for s in chosen],
+                                                  cfg["split"]["min_center_distance_m"])]
+    assign_states(cfg, spaced, mode["bbox"])
+    return spaced

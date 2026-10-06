@@ -71,7 +71,7 @@ class BraDDDataset(Dataset):
     def _normalisers(self, split_column: str, stats_path: str | Path | None, normalization: str,
                      region_spec: Mapping | None) -> tuple[dict | None, RegionNormalizer | None]:
         """Global train stats, or a per-region normaliser when `per_region_norm.enabled` is true."""
-        regional = bool(region_spec and region_spec.get("enabled", False))
+        regional = region_spec is not None and bool(region_spec["enabled"])
         if normalization == "none":
             if regional:
                 raise ValueError("per_region_norm needs normalization 'zscore'")

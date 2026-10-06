@@ -1,6 +1,6 @@
 """Write a SMOKE synthetic BraDD-format dataset: `python -m src.smoke_data --config configs/smoke/synthetic_bradd.yaml`.
 
-The data come from `tests.fixtures.make_bradd_fixture` (random speckle plus elliptical clearings). They are
+The data come from `src.data.synthetic.make_bradd_fixture` (random speckle plus elliptical clearings). They are
 not measurements; anything trained on them is SMOKE and reproduces nothing. A `SMOKE.txt` marker is
 written next to `meta.csv`. `synthetic.dated: true` writes the Phase 3 dated format instead.
 """
@@ -9,7 +9,7 @@ from pathlib import Path
 
 from src.config import load_config, require
 from src.training.run import SMOKE_LABEL
-from tests.fixtures import make_bradd_fixture
+from src.data.synthetic import make_bradd_fixture
 
 
 def write_smoke_dataset(root: str | Path, n_per_split: dict, seed: int, dated: bool) -> Path:
@@ -19,7 +19,7 @@ def write_smoke_dataset(root: str | Path, n_per_split: dict, seed: int, dated: b
         raise FileExistsError(f"{root} is not empty; delete it first to regenerate the SMOKE dataset")
     make_bradd_fixture(root, n_per_split=n_per_split, dated=dated, seed=seed)
     (root / "SMOKE.txt").write_text(
-        f"{SMOKE_LABEL}: synthetic data from tests/fixtures.py::make_bradd_fixture "
+        f"{SMOKE_LABEL}: synthetic data from src/data/synthetic.py::make_bradd_fixture "
         f"(dated {dated}, seed {seed}, counts {n_per_split}). Not real Sentinel-1 data.\n"
     )
     return root

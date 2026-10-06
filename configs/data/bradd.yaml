@@ -3,6 +3,9 @@ dataset: bradd
 root: data/BraDD-S1TS            # folder holding meta.csv and Samples/ after unzip (confirm with inspect_bradd.py)
 split_column: close_set          # fixed split shipped in meta.csv (PRD 4.2)
 stats_path: data/BraDD-S1TS/vanadrishti_close_train_stats.pt  # our train-only stats cache (not upstream close_stats.pt)
+# If the archive ships `close_stats.pt` (inspect_bradd.py reports it and compares it with ours), set
+# stats_path: data/BraDD-S1TS/close_stats.pt so our pipeline and the upstream reference run normalise identically
+# (a file that exists is loaded as is, never recomputed or overwritten).
 normalization: zscore            # zscore | none
 batch_size: 4
 num_workers: 4
@@ -38,6 +41,7 @@ inspect:
   out_dir: results/phase0_inspection
   n_samples: 500                 # sample files opened for keys/shapes/dB ranges; -1 = all
   seed: 42
+  shipped_stats_name: close_stats.pt  # upstream's cache name (`<split>_stats.pt` in the dataset root)
   paper_split_counts: {train: 15625, validation: 5251, test: 5112}      # Karaman et al. 2023
   notebook_split_counts: {train: 15625, validation: 5112, test: 5251}   # upstream DatasetAnalysis.ipynb
   geo_pattern: "lat|lon|^x$|^y$|geom|crs|coord|bound|transform"

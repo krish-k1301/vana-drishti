@@ -50,7 +50,7 @@ def radd_days(bands: dict[str, np.ndarray], window: Window, base_year: int) -> n
 
 
 def burn_days(bands: dict[str, np.ndarray], window: Window, shape: tuple[int, int]) -> np.ndarray:
-    """Per-pixel first MapBiomas Fogo burn day in the window (int16), all -1 when Fogo was not pulled."""
+    """Per-pixel causal Fogo burn day (last day of first burn month, int16; see first_burn_day); -1 if not pulled."""
     names = {y: fogo_band_name(y) for y in window.years}
     if not all(n in bands for n in names.values()):
         return np.full(shape, NO_DATE, dtype=np.int16)

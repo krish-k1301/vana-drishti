@@ -6,6 +6,7 @@ import torch
 
 from src.data import BraDDDataset, DatedDataset, PrefixTruncation, build_dataloaders
 from src.data.crop import SPATIAL_KEYS, tile_starts
+from tests.fixtures import data_config
 
 
 def _crop(size, mode):
@@ -79,9 +80,9 @@ def test_label_source_switch(dated_root, bradd_root):
 
 def test_loader_per_phase_label_source_and_crop(dated_root):
     """Label decomposition config: Hansen in train, PRODES in test; crops flow through collation."""
-    cfg = {"dataset": "dated", "root": str(dated_root), "split_column": "dated_set", "normalization": "none",
-           "batch_size": 4, "num_workers": 0, "seed": 0, "crop": _crop(16, "tile"),
-           "label_source": {"train": "hansen", "validation": "hansen", "test": "prodes"}}
+    cfg = data_config("dated_amazon", root=str(dated_root), normalization="none", batch_size=4, num_workers=0,
+                      seed=0, crop=_crop(16, "tile"), prefix_truncation=None,
+                      label_source={"train": "hansen", "validation": "hansen", "test": "prodes"})
     loaders = build_dataloaders(cfg)
     assert loaders["train"].dataset.label_key == "label_hansen" and loaders["test"].dataset.label_key == "label"
     batch = next(iter(loaders["test"]))

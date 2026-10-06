@@ -12,16 +12,15 @@ from gee.dates import NO_DATE, parse_date, to_days
 from gee.grid import PatchGrid, lonlat_bounds, rasterize
 
 
-def read_deter(path: str, date_attr: str, class_attr: str, state_attr: str | None) -> gpd.GeoDataFrame:
-    """Read a DETER file into columns event_date, event_class, state, geometry (EPSG:4326)."""
+def read_deter(path: str, date_attr: str, class_attr: str) -> gpd.GeoDataFrame:
+    """Read a DETER file into columns event_date, event_class, geometry (EPSG:4326)."""
     raw = gpd.read_file(path)
-    for attr in [date_attr, class_attr] + ([state_attr] if state_attr else []):
+    for attr in (date_attr, class_attr):
         if attr not in raw.columns:
             raise KeyError(f"DETER attribute '{attr}' not found in {path}; columns: {list(raw.columns)}")
     out = gpd.GeoDataFrame({
         "event_date": [parse_date(v) for v in raw[date_attr]],
         "event_class": raw[class_attr].astype(str).to_numpy(),
-        "state": raw[state_attr].astype(str).to_numpy() if state_attr else "NA",
     }, geometry=raw.geometry.to_numpy(), crs=raw.crs)
     return out.to_crs(4326)
 

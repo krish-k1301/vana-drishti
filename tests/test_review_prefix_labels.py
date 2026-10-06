@@ -2,7 +2,6 @@
 import datetime as dt
 
 import numpy as np
-import pytest
 import torch
 
 from gee.dates import Window, first_burn_day, to_days
@@ -34,8 +33,6 @@ def _dated_item(event_day: int, event_pixels: list[tuple[int, int]], other_pixel
             "RaddDay": torch.full((SIZE, SIZE), -1, dtype=torch.long)}
 
 
-@pytest.mark.xfail(strict=True, reason="REVIEW: deter anchor rebuilds labels from the patch's own EventMask only, "
-                                       "erasing other DETER clearings that the stored labels mark as deforested")
 def test_deter_anchor_keeps_other_dated_clearings_in_the_patch() -> None:
     """A pixel the stored cumulative labels mark deforested by day 20 must stay positive at t_c = 40."""
     item = _dated_item(event_day=25, event_pixels=[(2, 2)], other_pixels=[(0, 0)], burn_pixels={})
@@ -44,8 +41,6 @@ def test_deter_anchor_keeps_other_dated_clearings_in_the_patch() -> None:
     assert int(cut["Targets"][-1, 0, 0]) == 1
 
 
-@pytest.mark.xfail(strict=True, reason="REVIEW: burn anchor uses BurnDay of every pixel, so a fire on a negative "
-                                       "patch (pasture burn, no clearing) becomes a deforestation label")
 def test_burn_anchor_does_not_label_fires_on_negative_patches() -> None:
     """A negative patch (no event, constant stored labels) must stay all-zero under the burn anchor."""
     item = _dated_item(event_day=-1, event_pixels=[], other_pixels=[], burn_pixels={(1, 1): 15})
@@ -53,9 +48,6 @@ def test_burn_anchor_does_not_label_fires_on_negative_patches() -> None:
     assert int(cut["Targets"].sum()) == 0
 
 
-@pytest.mark.xfail(strict=True, reason="REVIEW: a MapBiomas Fogo burn month is dated to its FIRST day, so burn-"
-                                       "anchored labels at a cutoff early in the month claim a burn that may not "
-                                       "have happened yet (anti-causal by up to 30 days)")
 def test_burn_month_is_not_dated_before_it_can_be_known() -> None:
     """A burn in August 2021 must not get a reference day earlier than 31 Aug 2021 (causal-safe encoding)."""
     window = Window(dt.date(2021, 1, 1), dt.date(2021, 12, 31))

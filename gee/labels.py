@@ -5,7 +5,7 @@ import datetime as dt
 
 import ee
 
-from gee.dates import Window, encode_yyddd
+from gee.dates import Window
 from gee.grid import PatchGrid
 
 RADD_ALERT = "radd_alert"
@@ -81,8 +81,11 @@ def class_codes(neg_cfg: dict) -> dict[str, int]:
     return codes
 
 
-def class_image(neg_cfg: dict, labels_cfg: dict, period: Window, positives: bool, bbox: list[float]) -> object:
-    """Return a sampling image: band cls (codes from class_codes, POSITIVE_CODE for Hansen+RADD events) + radd_date."""
+def class_image(neg_cfg: dict, labels_cfg: dict, period: Window, positives: bool) -> object:
+    """Sampling image: band cls (class_codes; POSITIVE_CODE = Hansen loss in the period years) + hansen_lossyear.
+
+    Positives are selected from Hansen alone; RADD is never used for selection (PRD 5: comparison only).
+    """
     hansen = ee.Image(labels_cfg["hansen"]["asset"])
     base = labels_cfg["hansen"]["base_year"]
     loss = hansen.select(labels_cfg["hansen"]["lossyear_band"])
@@ -97,14 +100,19 @@ def class_image(neg_cfg: dict, labels_cfg: dict, period: Window, positives: bool
     for name, wc_class in neg_cfg["nonforest_classes"].items():
         open_land = land.eq(wc_class).And(cover.lte(neg_cfg["nonforest_treecover_max"])).And(loss.eq(0))
         cls = cls.where(open_land, codes[name])
-    radd = radd_image(labels_cfg["radd"], ee.Geometry.Rectangle(bbox))
     if positives:
-        radd_base = labels_cfg["radd"]["base_year"]
         in_years = loss.gte(period.start.year - base).And(loss.lte(period.end.year - base))
-        dated = radd.select(RADD_DATE).gte(encode_yyddd(period.start, radd_base)).And(
-            radd.select(RADD_DATE).lte(encode_yyddd(period.end, radd_base)))
-        cls = cls.where(in_years.And(dated), POSITIVE_CODE)
-    return cls.rename(CLASS_BAND).selfMask().toInt32().addBands(radd.select(RADD_DATE))
+        cls = cls.where(in_years, POSITIVE_CODE)
+    return cls.rename(CLASS_BAND).selfMask().toInt32().addBands(loss.rename(HANSEN_LOSS).unmask(0).toInt32())
+
+
+def state_features(states_cfg: dict, bbox: list[float]) -> dict:
+    """Simplified state polygons (one name property) intersecting a bbox, as FeatureCollection getInfo()."""
+    collection = (ee.FeatureCollection(states_cfg["asset"])
+                  .filter(ee.Filter.eq(states_cfg["filter_property"], states_cfg["filter_value"]))
+                  .filterBounds(ee.Geometry.Rectangle(bbox)))
+    simplified = collection.map(lambda feature: feature.simplify(states_cfg["simplify_m"]))
+    return simplified.select([states_cfg["name_property"]]).getInfo()
 
 
 def sample_class_points(image: object, bbox: list[float], counts: dict[int, int], scale_m: float, seed: int,

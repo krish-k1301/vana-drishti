@@ -8,7 +8,7 @@ import torch
 
 SPEC_KEYS = ("enabled", "size", "mode", "input_size")
 CROP_MODES = ("center", "random", "tile")
-SPATIAL_KEYS = ("Images", "Targets", "EventMask", "BurnDay", "RaddDay")
+SPATIAL_KEYS = ("Images", "Targets", "EventMask", "BurnDay", "RaddDay", "RefDay")
 
 
 def tile_starts(input_size: int, size: int) -> list[int]:
@@ -77,10 +77,12 @@ class SpatialCrop:
 
 def build_crop(spec: Mapping | None, phase: str, seed: int) -> SpatialCrop | None:
     """SpatialCrop from a config block (None if absent/disabled); `random` becomes `center` outside train."""
-    if not spec or not spec.get("enabled", False):
+    if spec is None:
         return None
     missing = [k for k in SPEC_KEYS if k not in spec]
     if missing:
         raise KeyError(f"crop needs keys {missing}")
+    if not spec["enabled"]:
+        return None
     mode = "center" if spec["mode"] == "random" and phase != "train" else spec["mode"]
     return SpatialCrop(int(spec["size"]), mode, int(spec["input_size"]), seed)

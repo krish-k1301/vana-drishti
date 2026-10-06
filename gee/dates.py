@@ -88,21 +88,34 @@ def decode_radd_yyddd(values: np.ndarray, base_year: int = 2000) -> np.ndarray:
 
 
 def first_burn_day(monthly: dict[int, np.ndarray], window: Window) -> np.ndarray:
-    """Return days since epoch of the first day of the first burn month overlapping the window, -1 if none.
+    """Causal day (days since epoch) of each pixel's earliest burn month: the LAST day of that month, -1 if none.
 
-    `monthly` maps calendar year to an array whose values are the burn month (1-12, 0 = unburned).
+    Resolution is one month and the burn may have happened up to ~30 days before the returned day, never after it.
+    A burn month that starts before window.start is pre-existing and encoded as window.start - 1 day (always
+    "already burned"); months after window.end are ignored. `monthly` maps calendar year to an array of burn
+    months (1-12, 0 = unburned); only the pulled years (the window's calendar years) are seen.
     """
     shape = next(iter(monthly.values())).shape
     out = np.full(shape, NO_DATE, dtype=np.int32)
+    pre_existing = to_days(window.start) - 1
     for year in sorted(monthly):
         months = np.asarray(monthly[year]).astype(np.int64)
         for month in range(1, 13):
             first = dt.date(year, month, 1)
             last = dt.date(year + (month == 12), month % 12 + 1, 1) - dt.timedelta(days=1)
-            if last < window.start or first > window.end:
+            if first > window.end:
                 continue
             sel = (months == month) & (out == NO_DATE)
-            out[sel] = to_days(first)
+            out[sel] = pre_existing if first < window.start else to_days(last)
+    return out
+
+
+def year_end_days(years: np.ndarray) -> np.ndarray:
+    """Days since epoch of 31 December of each calendar year (int32); -1 where year <= 0."""
+    years = np.asarray(years).astype(np.int64)
+    out = np.full(years.shape, NO_DATE, dtype=np.int32)
+    for year in np.unique(years[years > 0]):
+        out[years == year] = to_days(dt.date(int(year), 12, 31))
     return out
 
 

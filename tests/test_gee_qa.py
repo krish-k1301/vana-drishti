@@ -26,7 +26,8 @@ def good_sample(positive: bool = True, n_dates: int = 30) -> dict:
         mask[10:20, 10:20] = 1
     extras = {"event_date": dt.date(2021, 6, 1) if positive else None, "deter_class": "DESMATAMENTO_CR",
               "burn_month": np.full((48, 48), -1), "radd_date": np.full((48, 48), -1), "prodes_year": -1,
-              "polygon_area_ha": 1.0, "event_mask": mask, "region_block": "b0_0"}
+              "polygon_area_ha": 1.0, "event_mask": mask, "region_block": "b0_0",
+              "ref_day": np.where(mask > 0, 18779, -1), "label_hansen": label}
     return build_sample(image, dates, [dt.date(2021, 1, 1), dt.date(2021, 6, 1), dt.date(2021, 7, 1)], label, extras)
 
 
@@ -56,9 +57,10 @@ def test_bad_inputs_are_caught():
     assert not check_sample(good_sample(), row(gap=60.0), QA)["revisit_gap"]
     for orbit in (float("nan"), "", "10+83"):
         assert not check_sample(good_sample(), row(orbit=orbit), QA)["single_orbit"]
-    missing = good_sample()
-    del missing["radd_date"]
-    assert check_sample(missing, row(), QA) == {"format": False}
+    for key in ("radd_date", "ref_day", "label_hansen"):
+        missing = good_sample()
+        del missing[key]
+        assert check_sample(missing, row(), QA) == {"format": False}
     wrong = good_sample()
     wrong["label"] = wrong["label"].int()
     assert not check_sample(wrong, row(), QA)["format"]

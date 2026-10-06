@@ -12,12 +12,23 @@ from collections.abc import Mapping
 from pathlib import Path
 
 import pandas as pd
+import torch
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.data import inspection as ins  # noqa: E402
 from src.data.samples import load_sample, read_meta  # noqa: E402
+from src.data.stats import compute_train_stats  # noqa: E402
+
+
+def shipped_stats_table(root: Path, file_name: str, split_column: str) -> pd.DataFrame:
+    """Shipped stats vs our train-split stats (empty table when the archive ships no stats file)."""
+    path = root / file_name
+    if not path.exists():
+        return pd.DataFrame()
+    shipped = torch.load(path, map_location="cpu", weights_only=False)
+    return ins.compare_shipped_stats(shipped, compute_train_stats(root, split_column))
 
 
 def collect(top: Path, cfg: Mapping, split_column: str) -> dict[str, pd.DataFrame | Path | bool]:
@@ -42,6 +53,7 @@ def collect(top: Path, cfg: Mapping, split_column: str) -> dict[str, pd.DataFram
         "split_counts": ins.split_counts(meta, split_column, cfg["paper_split_counts"],
                                          cfg["notebook_split_counts"]),
         "sampling_type_counts": meta["sampling_type"].value_counts().rename_axis("sampling_type").reset_index(),
+        "shipped_stats_comparison": shipped_stats_table(root, cfg["shipped_stats_name"], split_column),
     }
 
 
@@ -49,6 +61,15 @@ def _describe(samples: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     """Summary statistics of selected per-sample columns."""
     present = [c for c in columns if c in samples.columns]
     return samples[present].describe().T.reset_index().rename(columns={"index": "quantity"}).round(3)
+
+
+def _stats_section(table: pd.DataFrame) -> str:
+    """Markdown for the shipped-vs-ours stats comparison, with the max absolute difference."""
+    if table.empty:
+        return "No shipped stats file at the dataset root; both tracks must use our cached train stats."
+    worst = float(table[["abs_diff_mean", "abs_diff_std"]].to_numpy().max())
+    return (ins.markdown_table(table) + f"\n\nMax abs difference: {worst:.6g} dB. Point `stats_path` at the "
+            "shipped file to make our pipeline use exactly the reference run's stats.")
 
 
 def render_report(tables: Mapping, label: str, top: Path) -> str:
@@ -69,6 +90,7 @@ def render_report(tables: Mapping, label: str, top: Path) -> str:
         ins.markdown_table(tables["files_by_directory"], 30), "", "Every file outside Samples/:", "",
         ins.markdown_table(tables["non_sample_files"]), "",
         f"`close_stats.pt` ships in the archive: **{tables['close_stats_present']}**.", "",
+        "## Shipped normalisation stats vs ours (train split)", _stats_section(tables["shipped_stats_comparison"]), "",
         "## Geolocation search",
         "No candidate found." if hits.empty else ins.markdown_table(hits), "",
         "## meta.csv columns", ins.markdown_table(tables["meta_columns"]), "",

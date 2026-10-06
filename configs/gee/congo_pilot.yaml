@@ -32,15 +32,15 @@ grid:
   pixel_size_m: 10
 
 events:
-  source: hansen_radd             # no DETER outside Brazil: Hansen loss is the label, RADD dates the timing reference
-  # Positives: points with Hansen loss in the period years AND a RADD alert dated in the period; event date = RADD
-  # date at the patch centre. Change pixels = Hansen loss in the window years, dated by their RADD date, else by the
-  # event date (owner decision: this makes part of the label timing RADD-derived, so latency vs RADD is biased to 0).
-  # VERIFY RADD coverage start for this region before moving the period earlier.
+  source: hansen                  # no DETER outside Brazil: Hansen loss alone selects and dates events
+  # Positives: points with Hansen loss in the period years. Event date = 31 Dec of the loss year (the earliest date
+  # an annual product can know the loss: causal-safe, 1-year resolution). Labels = Hansen loss dated the same way.
+  # RADD is never used to select or date events (PRD 5); radd_date is kept per pixel for latency-vs-RADD only, and
+  # RADD-missed events stay in the set.
+  # VERIFY RADD coverage start for this region (only matters for the radd_date attribute).
   period_start: "2021-01-01"
   period_end: "2023-12-31"
-  positive_class_label: hansen_radd   # stored in the deter_class field
-  event_slack_days: 60            # event_mask = change pixels dated within this many days of the event date
+  positive_class_label: hansen_loss   # stored in the deter_class field
 
 labels:
   pull: [radd, hansen, modis]       # label bands pulled from Earth Engine per patch
@@ -53,7 +53,7 @@ labels:
     alert_band: Alert             # 2 = unconfirmed, 3 = confirmed (GFW docs)
     date_band: Date               # VERIFY: YYDDD, YY = years since base_year (GFW docs; decode in gee/dates.py)
     base_year: 2000
-  hansen:                         # labels (Phase 6) and the negative-class image
+  hansen:                         # labels (Phase 6), label_hansen and the negative-class image
     asset: UMD/hansen/global_forest_change_2025_v1_13
     lossyear_band: lossyear       # 1-25 = 2001-2025
     treecover_band: treecover2000
@@ -61,6 +61,8 @@ labels:
   modis:
     collection: MODIS/061/MCD64A1
     band: BurnDate                # 500 m: patch-level flag only (PRD 5)
+
+states: null                      # no sub-national regions: every patch gets region_label as `state`
 
 negatives:
   # BraDD-S1TS counts used as type weights (PRD 5): oldDeforest 7557, forest 5472, herbaceous 1780,
@@ -81,7 +83,9 @@ split:
   block_size_deg: 0.5             # region blocks; patches crossing a block edge are dropped
   seed: 42
   fractions: {train: 0.7, validation: 0.15, test: 0.15}
-  min_center_distance_m: 240      # thin near-duplicate centres (half a patch)
+  # >= patch diagonal 480*sqrt(2) = 679 m (checked at load) so no two kept patches overlap, in any split or class,
+  # and no event is counted twice; +~14 m for the 10 m grid snapping of both centres -> 700 m.
+  min_center_distance_m: 700
 
 modes:
   pilot:
