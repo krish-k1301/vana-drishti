@@ -177,6 +177,14 @@ Regenerate: `python -m src.smoke_data --config configs/smoke/synthetic_bradd.yam
   (1 − Π(1 − p_k)); `max` available. A single long interval would be out of distribution.
 - Crop tiling: 16 px → 9 disjoint tiles; 32 px → 4 corner crops overlapping by 16 px (metrics summed over 32-px
   tiles double-count overlap strips).
+- On the dated set (cumulative labels) the `label[0] OR pred` rule inflates IoU (1→1 pixels become free TPs):
+  SMOKE 0.92 with OR vs ~0.00 without. Phases 4–6 headline the without-OR numbers.
+- Phase 5 SMOKE: noisy-OR over ~14 monthly intervals pushed the validation tau to ~0.9999 (saturation over long
+  windows). Owner to compare `interval_combiner: max` on real data.
+- `src.evaluate` sets `trainer.float32_matmul_precision` like `src.train`, so standalone eval counts equal the
+  training-time test counts.
+- Exchanger+U-Net SMOKE used batch 1 (batch 4 needed >14 GB RAM on CPU); convlstm/convgru/galileo SMOKE trained on
+  250 samples, exchanger on 100, for CPU time. Recorded in each `configs/smoke/bench_*.yaml`.
 - Tier B/C recipe differences are flagged in each `configs/models/*.yaml` header (they all train here with the
   shared focal α=0.75 γ=1 recipe per PRD 6).
 
