@@ -22,8 +22,8 @@ terrabrasilis:
     deter_amz:
       type_name: "deter-amz:deter_amz"
       sort_by: gid
-      cql_filter: "view_date >= '2020-01-01' AND view_date <= '2023-12-31'"
-      out_name: deter_amz_2020_2023.geojson
+      cql_filter: "view_date >= '2019-01-01' AND view_date <= '2024-04-30'"
+      out_name: deter_amz_2019_2024.geojson
     prodes_legal_amz:
       type_name: "prodes-legal-amz:yearly_deforestation"
       sort_by: uid

@@ -1,0 +1,115 @@
+# Phase 6 (PRD 7): Congo Basin pilot, same pipeline as Phase 3, BraDD-compatible output (.orchestrator/INTERFACES.md).
+# Run: python gee/run_export.py --config configs/gee/congo_pilot.yaml --pilot   (full run only after pilot QA passes)
+# Anything marked VERIFY is unconfirmed and must be checked against the source before an export.
+name: congo_pilot
+region_label: congo   # meta.csv `state` for every patch (no DETER state outside Brazil)
+placeholder_prefix: VERIFY_     # values starting with this make the CLI refuse to run
+
+paths:                          # sub-paths inside each mode's out_root (modes below)
+  raw_subdir: raw               # pulled arrays (npz / mirrored batch CSV), sidecar JSON, plan, task log
+  qa_subdir: qa
+  task_log: task_log.jsonl
+  plan: plan.csv
+
+s1:
+  collection: COPERNICUS/S1_GRD   # already dB after GEE default chain (thermal noise, calibration, terrain correction)
+  instrument_mode: IW
+  resolution_meters: 10
+  polarisations: [VV, VH]
+  # Property `platform_number`. Sentinel-1B failed Dec 2021: 2022+ windows are 12-day revisit (recorded per patch).
+  # VERIFY: Sentinel-1C availability (and its platform_number value 'C') in COPERNICUS/S1_GRD for 2025+ before adding.
+  platforms: [A, B]
+  # Tie-break only, when two relative orbits have the same number of dates. VERIFY which pass BraDD-S1TS used.
+  pass_preference: [DESCENDING, ASCENDING]
+  nodata: -9999.0                 # fill for pixels with no data; such dates are dropped at conversion
+
+window:                           # PRD Phase 3: ~12 months before to ~4 months after the event date
+  days_before: 365
+  days_after: 120
+
+grid:
+  patch_size: 48                  # 48 x 48 px = 480 m, like BraDD
+  pixel_size_m: 10
+
+events:
+  source: hansen_radd             # no DETER outside Brazil: Hansen loss is the label, RADD dates the timing reference
+  # Positives: points with Hansen loss in the period years AND a RADD alert dated in the period; event date = RADD
+  # date at the patch centre. Change pixels = Hansen loss in the window years, dated by their RADD date, else by the
+  # event date (owner decision: this makes part of the label timing RADD-derived, so latency vs RADD is biased to 0).
+  # VERIFY RADD coverage start for this region before moving the period earlier.
+  period_start: "2021-01-01"
+  period_end: "2023-12-31"
+  positive_class_label: hansen_radd   # stored in the deter_class field
+  event_slack_days: 60            # event_mask = change pixels dated within this many days of the event date
+
+labels:
+  pull: [radd, hansen, modis]       # label bands pulled from Earth Engine per patch
+  radd:
+    collection: projects/radar-wur/raddalert/v1
+    layer_property: layer         # VERIFY property name/value selecting alert images (vs forest baseline)
+    layer_value: alert
+    geoidx_property: geoidx       # VERIFY property name/value of the Africa (VERIFY value) region
+    geoidx_value: af
+    alert_band: Alert             # 2 = unconfirmed, 3 = confirmed (GFW docs)
+    date_band: Date               # VERIFY: YYDDD, YY = years since base_year (GFW docs; decode in gee/dates.py)
+    base_year: 2000
+  hansen:                         # labels (Phase 6) and the negative-class image
+    asset: UMD/hansen/global_forest_change_2025_v1_13
+    lossyear_band: lossyear       # 1-25 = 2001-2025
+    treecover_band: treecover2000
+    base_year: 2000
+  modis:
+    collection: MODIS/061/MCD64A1
+    band: BurnDate                # 500 m: patch-level flag only (PRD 5)
+
+negatives:
+  # BraDD-S1TS counts used as type weights (PRD 5): oldDeforest 7557, forest 5472, herbaceous 1780,
+  # agriculture 152, shrubs 21 -> 14982 negatives for 8712 positives (ratio 1.72). BraDD `boundary` is not built.
+  ratio: 1.72
+  type_weights: {oldDeforest: 7557, forest: 5472, herbaceous: 1780, agriculture: 152, shrubs: 21}
+  # Classes come from Hansen + ESA WorldCover (no PRODES/MapBiomas outside Brazil). Negatives whose patch shows
+  # Hansen loss inside the window are rejected at conversion.
+  nonforest_classes: {herbaceous: 30, agriculture: 40, shrubs: 20}   # ESA WorldCover v200 class codes
+  worldcover: {collection: ESA/WorldCover/v200, band: Map, tree_class: 10}
+  forest_treecover_min: 80        # stable forest: treecover2000 >= this, no Hansen loss through 2025
+  nonforest_treecover_max: 10
+  sample_scale_m: 30
+  oversample: 3                   # candidates drawn per wanted negative (boundary/event filters drop some)
+  tile_scale: 4
+
+split:
+  block_size_deg: 0.5             # region blocks; patches crossing a block edge are dropped
+  seed: 42
+  fractions: {train: 0.7, validation: 0.15, test: 0.15}
+  min_center_distance_m: 240      # thin near-duplicate centres (half a patch)
+
+modes:
+  pilot:
+    bbox: [25.0, 0.5, 26.0, 1.5]   # Tshopo, DRC, around Kisangani: smallholder clearing frontier; 4 blocks of 0.5 deg
+    max_positives: 30
+    out_root: data/dated_congo_pilot     # BraDD-format root: meta.csv, Samples/, raw/, qa/
+  full:
+    bbox: [8.5, -5.5, 31.0, 5.5]   # Congo Basin humid forest envelope
+    max_positives: 5000
+    out_root: data/dated_congo           # BraDD-format root read by the data loaders
+
+export:
+  backend: {pilot: direct, full: batch}   # direct = ee.data.computePixels; batch = Export.table CSV per patch
+  max_attempts: 3
+  max_pending_tasks: 2500         # VERIFY current Earth Engine batch queue quota for the project
+  batch:
+    destination: gcs              # gcs or drive; mirror outputs into <root>/full/raw (gsutil -m rsync) to convert
+    bucket: VERIFY_GCS_BUCKET
+    prefix: vanadrishti/congo_pilot
+    drive_folder: vanadrishti_congo_pilot
+
+qa:
+  vv_range: [-30.0, 5.0]
+  vh_range: [-35.0, 0.0]
+  max_out_of_range_fraction: 0.01
+  vv_median_range: [-20.0, -2.0]  # catches linear-scale (non-dB) data
+  t_range: [15, 90]               # 486-day window, one orbit: ~41 dates at 12 days, ~81 at 6 days
+  max_gap_days: 48
+  min_positives: 10
+  max_failed_fraction: 0.05
+  spot_check_size: 20             # random positives listed for the owner's NICFI spot-check
