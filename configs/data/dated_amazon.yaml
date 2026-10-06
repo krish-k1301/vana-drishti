@@ -1,0 +1,22 @@
+# Dated early-detection set (Phase 3 export, Phase 4 training). Paths are relative to the repo root.
+dataset: dated
+root: data/dated_amazon          # Phase 3 GEE export output in BraDD format (not yet produced)
+split_column: dated_set          # spatial split by region block
+stats_path: data/dated_amazon/vanadrishti_dated_train_stats.pt
+normalization: zscore
+batch_size: 4
+num_workers: 4
+seed: 42
+temporal_subsample:
+  mode: none
+  num_dates: -1
+  at_test: false
+max_samples:
+  train: null
+  validation: null
+  test: null
+prefix_truncation:
+  anchor: deter                  # deter | burn (trained separately, PRD Phase 4)
+  min_dates: 4                   # images required at or before the cutoff
+  label_interval_days: 30        # cumulative label spacing, last label exactly at the cutoff
+  phases: [train]                # validation/test use sliding prefixes in Phase 5 (prefix_at)

@@ -1,0 +1,37 @@
+# Download settings. Paths are relative to the repo root.
+bradd:
+  url: "https://zenodo.org/record/8060250/files/BraDD-S1TS_zenodo.zip?download=1"
+  md5: 16f29111728372414c1bebfdbb156f20
+  dest_dir: data                 # zip is saved here and unzipped here
+  zip_name: BraDD-S1TS_zenodo.zip
+  delete_zip_after_unzip: false  # also deleted automatically when free space < min_free_gb (PRD Phase 0)
+  min_free_gb: 45
+  chunk_mb: 8
+  timeout_s: 60
+
+# TerraBrasilis endpoints. UNVERIFIED: terrabrasilis.dpi.inpe.br is blocked (proxy 403) in the build
+# container, so layer names, attributes and file URLs must be checked once the host is reachable.
+terrabrasilis:
+  wfs_url: "https://terrabrasilis.dpi.inpe.br/geoserver/ows"
+  wfs_version: "2.0.0"
+  output_format: application/json
+  page_size: 10000
+  timeout_s: 120
+  dest_dir: data/terrabrasilis
+  layers:
+    deter_amz:
+      type_name: "deter-amz:deter_amz"
+      sort_by: gid
+      cql_filter: "view_date >= '2020-01-01' AND view_date <= '2023-12-31'"
+      out_name: deter_amz_2020_2023.geojson
+    prodes_legal_amz:
+      type_name: "prodes-legal-amz:yearly_deforestation"
+      sort_by: uid
+      cql_filter: null
+      out_name: prodes_legal_amz_yearly_deforestation.geojson
+  file_downloads:                # alternative full-archive downloads (shapefiles), also unverified
+    deter_amz: "https://terrabrasilis.dpi.inpe.br/file-delivery/download/deter-amz/shape"
+    prodes_legal_amz: "https://terrabrasilis.dpi.inpe.br/download/dataset/legal-amz-prodes/vector/yearly_deforestation.zip"
+  deter_class_attribute: classname
+  expected_deter_classes: [DESMATAMENTO_CR, DESMATAMENTO_VEG, CICATRIZ_DE_QUEIMADA, DEGRADACAO,
+                           CS_DESORDENADO, CS_GEOMETRICO, MINERACAO]
