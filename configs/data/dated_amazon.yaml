@@ -6,7 +6,6 @@ stats_path: data/dated_amazon/vanadrishti_dated_train_stats.pt
 normalization: zscore
 batch_size: 4
 num_workers: 4
-seed: 42
 temporal_subsample:
   mode: none
   num_dates: -1
