@@ -1,0 +1,24 @@
+name: vanadrishti
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - torch==2.5.1
+      - torchvision==0.20.1
+      - lightning==2.4.0
+      - torchmetrics==1.9.0
+      - numpy==2.1.3
+      - pandas==2.2.3
+      - scipy==1.17.1
+      - pyyaml==6.0.3
+      - einops==0.8.2
+      - matplotlib==3.11.2
+      - tqdm==4.70.1
+      - requests==2.34.2
+      - earthengine-api==1.7.47
+      - geopandas==1.2.0
+      - shapely==2.1.2
+      - pyproj==3.7.2
+      - pytest==9.1.1

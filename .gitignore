@@ -1,0 +1,9 @@
+data/
+__pycache__/
+*.pyc
+.pytest_cache/
+results/runs/
+*.ckpt
+*.part
+lightning_logs/
+.orchestrator/
