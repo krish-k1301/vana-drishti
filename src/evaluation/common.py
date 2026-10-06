@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import torch
 from torch import nn
 
 from src.config import require
@@ -12,7 +13,8 @@ from src.training.run import SMOKE_LABEL
 
 
 def load_model(cfg: dict, checkpoint: str | Path) -> nn.Module:
-    """Rebuild the network from `cfg['model']` and load the weights of a ChangeDetectionModule checkpoint."""
+    """Rebuild the network from `cfg['model']`, load ChangeDetectionModule weights, match training's matmul precision."""
+    torch.set_float32_matmul_precision(require(cfg, "trainer.float32_matmul_precision"))
     model = build_model(require(cfg, "model"))
     load_model_weights(model, str(checkpoint))
     return model.eval()

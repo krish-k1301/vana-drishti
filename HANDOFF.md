@@ -44,7 +44,7 @@ Notes on the environment:
 - The original prompt used subagents (data / model / eval / gee / reviewer). Locally you may do the work directly
   or use subagents; keep the independent-review step for anything that touches labels or metrics.
 
-## 3. Where things stand (2026-10-06, commit a7f4bca)
+## 3. Where things stand (2026-10-06 ~21:00 UTC; see `git log` for the latest commit)
 
 ### Blockers in the cloud environment (probably not blockers on your PC)
 | Blocker | Effect |
@@ -60,13 +60,15 @@ Notes on the environment:
 |---|---|---|
 | 0 Setup + inspection | PARTIAL (data blocked) | Layout, `environment.yml`, vendoring, `scripts/download_bradd.py` (resumable + md5), `scripts/inspect_bradd.py` (every PRD item incl. geolocation search and shipped `close_stats.pt` comparison), tested on synthetic data only. |
 | 1 Baseline reproduction | PARTIAL (no GPU, no data) | Our pipeline `src/train.py`; upstream reference launcher `src/reference_run.py`; 4 SMOKE runs done. |
-| 2 Benchmark suite | PARTIAL, code done, no runs | Tier A (ConvLSTM, ConvGRU, 3D-UNet, U-TAE seq2seq) and Tier B/C (TSViT, Exchanger+U-Net, Galileo nano WORKING; AnySat code works but weights BLOCKED). `src/evaluate.py` incl. temporal-depth ablation, `src/benchmark_table.py`, `scripts/plot_benchmark.py`. **No SMOKE benchmark runs yet.** |
+| 2 Benchmark suite | PARTIAL (SMOKE done, no GPU/data) | Tier A (ConvLSTM, ConvGRU, 3D-UNet, U-TAE seq2seq) and Tier B/C (TSViT, Exchanger+U-Net, Galileo nano WORKING; AnySat code works but weights BLOCKED). SMOKE benchmark of 8 models + U-TAE temporal-depth ablation done: `results/smoke/benchmark_smoke.csv`, `.png`, `ablation_utae_*.csv`. SMOKE configs `configs/smoke/bench_*.yaml` (convlstm/convgru/galileo train on 250 samples, exchanger on 100 with batch 1 — 14 GB RAM OOM at batch 4; all noted in the configs). |
 | 3 Dated Amazon dataset | PARTIAL (no EE creds) | Full GEE pipeline in `gee/`, tested with mocked `ee`; CLI exits 2 "BLOCKED: no Earth Engine credentials". DETER/PRODES download script written, never reached the server. |
-| 4 Prefix-truncation training | IN PROGRESS | `src/data/prefix.py` (fixed after review), `configs/early/utae_prefix_{deter,burn}.yaml`, `configs/smoke/early_{deter,burn}.yaml`. SMOKE runs were being **re-run after the label fixes**; treat any existing `results/runs/smoke_early_*` as stale. |
-| 5 Early-detection eval | CODE DONE, no run on a Phase 4 checkpoint | `src/early_eval.py` (sliding prefix, noisy-OR over 30-day intervals, tau on validation at a false-alarm budget, latency vs DETER/burn/RADD, recall at +0/12/24/48/90 d, splits by stage/size/edge), `scripts/plot_early.py`. |
+| 4 Prefix-truncation training | PARTIAL (SMOKE done, no dated data) | `src/data/prefix.py` (fixed after review), `configs/early/utae_prefix_{deter,burn}.yaml`. SMOKE runs on the fixed code done: `results/smoke/smoke_early_{deter,burn}_metrics_test.csv`. On the dated set the `label[0] OR pred` rule inflates IoU (cumulative labels keep 1→1 pixels): 0.92 with OR vs ~0.00 without after 2 epochs. **Report the without-OR numbers for Phases 4–6.** Checkpoints are in gitignored `results/runs/smoke_early_*/checkpoints/` (regenerate if missing: `python -m src.train --config configs/smoke/early_deter.yaml`, ~9 min on 4 CPU cores). |
+| 5 Early-detection eval | CODE DONE, SMOKE run is next | `src/early_eval.py` (sliding prefix, noisy-OR over 30-day intervals, tau on validation at a false-alarm budget, latency vs DETER/burn/RADD, recall at +0/12/24/48/90 d, splits by stage/size/edge), `scripts/plot_early.py`. |
 | 6 Cross-biome | CODE DONE, no runs | `src/cross_biome.py`, `src/label_decomposition.py`, GEE configs for Congo/Borneo pilots, per-region norm / crop / label-source switches in `src/data/`. |
 
 ### SMOKE results so far (synthetic data, 500/100/100 samples, 2 CPU epochs; they reproduce nothing)
+Small CSV copies of every SMOKE metrics file are committed in `results/smoke/` (benchmark table, ablation, Phase 1
+and Phase 4 test metrics). The table below is from the Phase 1 runs.
 Pixel IoU with the `label[0] OR prediction` rule, from `results/runs/<run>/metrics_test.json`
 (note: `results/runs/` is gitignored, so these files are **not** in the repo; regenerate with the commands below):
 
@@ -75,7 +77,7 @@ Pixel IoU with the `label[0] OR prediction` rule, from `results/runs/<run>/metri
 | upstream reference, CE | 0.7228 | results/runs/smoke_reference_utae_ce/metrics_test.json |
 | ours, CE | 0.7438 | results/runs/smoke_utae_ce/metrics_test.json |
 | upstream reference, focal γ=1 | 0.7774 | results/runs/smoke_reference_utae_focal/metrics_test.json |
-| ours, focal γ=1 | 0.7697 | results/runs/smoke_utae_focal/metrics_test.json |
+| ours, focal γ=1 (retrained on current code) | 0.7697 | results/smoke/smoke_utae_focal_metrics_test.csv |
 
 Regenerate: `python -m src.smoke_data --config configs/smoke/synthetic_bradd.yaml`, then
 `python -m src.reference_run --config configs/smoke/reference_utae_ce.yaml` and
@@ -83,18 +85,13 @@ Regenerate: `python -m src.smoke_data --config configs/smoke/synthetic_bradd.yam
 
 ## 4. Remaining work, in order
 
-1. **Phase 4 SMOKE** (if not already in git history after a7f4bca): delete `data/synthetic_dated`, regenerate with
-   `python -m src.smoke_data --config configs/smoke/synthetic_dated.yaml`, run
-   `python -m src.train --config configs/smoke/early_deter.yaml` and `.../early_burn.yaml`. Verify the model-side
-   fix for padded label intervals: a batch mixing t=3 and t=2 samples must give the same loss/meters as scoring
-   them separately (`SegmentNetwork.interval_mask`, `src.training.meters.select_intervals`). Add that test if
-   missing.
+1. ~~Phase 4 SMOKE~~ done (and the mixed-label-count test exists: `tests/test_train_intervals.py`).
+   If `data/synthetic_dated` or the checkpoints are missing locally, regenerate:
+   `python -m src.smoke_data --config configs/smoke/synthetic_dated.yaml`, then the two `src.train` commands.
 2. **Phase 5 SMOKE**: `python -m src.early_eval --config configs/smoke/early_deter.yaml --checkpoint <best ckpt>`
    then `python scripts/plot_early.py --early-dir <out>`. Same for burn.
-3. **Phase 2 SMOKE**: one short SMOKE run per model in `configs/models/*.yaml` on `data/synthetic_bradd`
-   (override `data.root`, `trainer.max_epochs=2`, `smoke=true`, `output.runs_dir`), then `src.evaluate`,
-   the temporal-depth ablation (`--temporal-subsample mode=last_only num_dates=1`, `mode=uniform num_dates=2|5|10`),
-   `src.benchmark_table` and `scripts/plot_benchmark.py`. Skip `anysat` unless you have its checkpoint.
+3. ~~Phase 2 SMOKE~~ done (`results/smoke/`). `src.evaluate` now applies `trainer.float32_matmul_precision` so its
+   counts match the test pass inside `src.train` exactly.
 4. **Phase 6 SMOKE**: `src.cross_biome` on a copy of the synthetic dated set with DETER/burn keys stripped, and
    `src.label_decomposition` on two SMOKE runs (`data.label_source` prodes vs hansen at train, prodes at test).
 5. **Final cleanup** (from the orchestrator prompt):

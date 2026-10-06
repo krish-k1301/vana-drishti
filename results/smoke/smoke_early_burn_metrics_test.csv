@@ -1,0 +1,5 @@
+label,experiment_name,level,variant,tp,fp,fn,tn,iou,precision,recall,f1
+SMOKE,smoke_early_burn,pixel,with_or,59317,0,5464,2792179,0.9156542813337915,0.9999999999831414,0.9156542813337915,0.9559702815362702
+SMOKE,smoke_early_burn,pixel,without_or,0,0,64781,2792179,0.0,0.0,0.0,0.0
+SMOKE,smoke_early_burn,patch,with_or,545,0,33,662,0.9429065727631374,0.9999999981651376,0.9429065727631374,0.9706144239169824
+SMOKE,smoke_early_burn,patch,without_or,0,0,578,662,0.0,0.0,0.0,0.0

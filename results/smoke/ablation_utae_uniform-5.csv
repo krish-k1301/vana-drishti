@@ -1,0 +1,17 @@
+label,experiment_name,stratum_type,stratum,level,variant,tp,fp,fn,tn,iou,precision,recall,f1,mmu,n_components,n_detected,component_recall
+SMOKE,smoke_utae_focal,all,all,pixel,with_or,6884,2102,3,221411,0.7658248970112554,0.7660805696899532,0.999564396544277,0.8673848672755767,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",,,
+SMOKE,smoke_utae_focal,all,all,pixel,without_or,6884,2095,3,221418,0.7664217322682674,0.7666778036789533,0.999564396544277,0.8677675531491532,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",,,
+SMOKE,smoke_utae_focal,all,all,patch,with_or,46,0,0,54,0.9999999782608701,0.9999999782608701,0.9999999782608701,0.9999999782608701,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",,,
+SMOKE,smoke_utae_focal,all,all,patch,without_or,46,0,0,54,0.9999999782608701,0.9999999782608701,0.9999999782608701,0.9999999782608701,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",,,
+SMOKE,smoke_utae_focal,size_bin,<0.5 ha,pixel,with_or,0,3,0,0,0.0,0.0,0.0,0.0,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",0,0,nan
+SMOKE,smoke_utae_focal,size_bin,0.5-2 ha,pixel,with_or,3323,1435,2,0,0.6981092435508174,0.6984026900591839,0.9993984959400306,0.8222194727645133,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",31,31,1.0
+SMOKE,smoke_utae_focal,size_bin,>2 ha,pixel,with_or,3561,664,1,0,0.8426407948786936,0.8428402364869017,0.9997192585626842,0.9146012582728648,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",15,15,1.0
+SMOKE,smoke_utae_focal,edge_interior,interior,pixel,with_or,2642,0,0,0,0.9999999996214989,0.9999999996214989,0.9999999996214989,0.9999999996214989,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",,,
+SMOKE,smoke_utae_focal,edge_interior,edge,pixel,with_or,4242,0,3,0,0.9992932859836764,0.999999999764262,0.9992932859836764,0.9996465179687412,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",,,
+SMOKE,smoke_utae_focal,edge_interior,outer_ring,pixel,with_or,0,470,0,5313,0.0,0.0,0.0,0.0,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",,,
+SMOKE,smoke_utae_focal,size_bin,<0.5 ha,pixel,without_or,0,3,0,0,0.0,0.0,0.0,0.0,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",0,0,nan
+SMOKE,smoke_utae_focal,size_bin,0.5-2 ha,pixel,without_or,3323,1435,2,0,0.6981092435508174,0.6984026900591839,0.9993984959400306,0.8222194727645133,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",31,31,1.0
+SMOKE,smoke_utae_focal,size_bin,>2 ha,pixel,without_or,3561,657,1,0,0.8440388715705051,0.8442389756177716,0.9997192585626842,0.9154241642890941,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",15,15,1.0
+SMOKE,smoke_utae_focal,edge_interior,interior,pixel,without_or,2642,0,0,0,0.9999999996214989,0.9999999996214989,0.9999999996214989,0.9999999996214989,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",,,
+SMOKE,smoke_utae_focal,edge_interior,edge,pixel,without_or,4242,0,3,0,0.9992932859836764,0.999999999764262,0.9992932859836764,0.9996465179687412,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",,,
+SMOKE,smoke_utae_focal,edge_interior,outer_ring,pixel,without_or,0,465,0,5318,0.0,0.0,0.0,0.0,"MMU 0.01 ha (1 px of 10 m, 8-connected components)",,,

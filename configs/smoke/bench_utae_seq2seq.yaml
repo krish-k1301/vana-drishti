@@ -1,0 +1,15 @@
+# SMOKE Phase 2 benchmark run of configs/models/utae_seq2seq.yaml on the synthetic BraDD set, 2 epochs on CPU.
+# Synthetic data, CPU, 2 epochs: proves the pipeline runs end to end, reproduces nothing.
+base: ../models/utae_seq2seq.yaml
+experiment_name: smoke_bench_utae_seq2seq
+smoke: true
+
+data:
+  root: data/synthetic_bradd
+  stats_path: data/synthetic_bradd/vanadrishti_close_train_stats.pt
+  num_workers: 2
+
+trainer:
+  max_epochs: 2
+  accelerator: cpu
+  enable_progress_bar: false

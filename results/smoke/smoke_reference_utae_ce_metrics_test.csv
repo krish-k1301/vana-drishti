@@ -1,0 +1,2 @@
+label,experiment_name,level,variant,Accuracy,Recall,Precision,IoU,F1
+SMOKE,smoke_reference_utae_ce,pixel,with_or,0.9885373115539551,1.0,0.7228169441223145,0.7228169441223145,0.8391105532646179

@@ -1,0 +1,18 @@
+# SMOKE Phase 2 benchmark run of configs/models/exchanger_unet.yaml on the synthetic BraDD set, 2 epochs on CPU.
+# Synthetic data, CPU, 2 epochs: proves the pipeline runs end to end, reproduces nothing.
+base: ../models/exchanger_unet.yaml
+experiment_name: smoke_bench_exchanger_unet
+smoke: true
+
+data:
+  root: data/synthetic_bradd
+  stats_path: data/synthetic_bradd/vanadrishti_close_train_stats.pt
+  num_workers: 2
+  max_samples:  # SMOKE deviation: train subset only (2.2 s/sample at batch 1 measured on this 4-core CPU; ~20 min budget per model)
+    train: 100
+  batch_size: 1  # SMOKE deviation: batch 4 needs > 14 GB RAM on CPU (per-pixel Exchanger over 2304 px x T dates; OOM-killed)
+
+trainer:
+  max_epochs: 2
+  accelerator: cpu
+  enable_progress_bar: false
