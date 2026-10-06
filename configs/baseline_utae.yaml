@@ -18,7 +18,8 @@
 #   Seed 42                           -> seed: 42
 #   Split close_set column            -> data section (configs/data/bradd.yaml)
 experiment_name: baseline_utae
-seed: 42
+smoke: false        # true labels every output SMOKE (synthetic or shortened data)
+seed: 42            # single source of the seed (data loaders get it injected by src.train)
 seed_workers: true  # upstream: pl.seed_everything(42, workers=True)
 
 data:
@@ -73,6 +74,8 @@ trainer:
   accelerator: auto
   deterministic: false        # as upstream (fast, not bit-reproducible on GPU)
   num_sanity_val_steps: 0
+  enable_progress_bar: true
+  log_every_n_steps: 50       # Lightning default, used implicitly upstream
   float32_matmul_precision: medium  # upstream: torch.set_float32_matmul_precision('medium')
   early_stopping:
     monitor: validation/pixel_iou
@@ -91,3 +94,12 @@ logging:
   csv: true
   tensorboard: false
   wandb: false
+
+# Only read by src.reference_run (thin launcher around the vendored upstream code).
+reference:
+  split: close                 # upstream BraDDS1TSDataset(split=...) reads column '<split>_set'
+  normalization_method: ZScore # passed as Dataset_NormalizationMethod (the key upstream actually reads)
+  temporal_dropout:
+    is_random: false
+    num_temporal: -1           # < 0 = no temporal dropout (upstream convention)
+  save_outputs: false          # upstream Experiment savingFolder: per-sample test predictions on disk

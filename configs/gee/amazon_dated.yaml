@@ -37,9 +37,8 @@ events:
   period_start: "2020-01-01"
   period_end: "2023-12-31"
   deter:
-    # Output of scripts/download_deter_prodes.py (configs/data/downloads.yaml). VERIFY: that download filters
-    # view_date to 2020-2023; negatives are screened against events from period_start - 365 d to period_end + 120 d,
-    # so widen the download to 2019-01-01 .. 2024-04-30 before the full export.
+    # Output of scripts/download_deter_prodes.py (configs/data/downloads.yaml), which downloads 2019-01-01..2024-04-30
+    # so negatives can be screened against events from period_start - 365 d to period_end + 120 d.
     path: data/terrabrasilis/deter_amz_2019_2024.geojson
     date_attribute: view_date     # VERIFY attribute name in the DETER-B file
     class_attribute: classname    # VERIFY attribute name in the DETER-B file

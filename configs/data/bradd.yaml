@@ -6,7 +6,6 @@ stats_path: data/BraDD-S1TS/vanadrishti_close_train_stats.pt  # our train-only s
 normalization: zscore            # zscore | none
 batch_size: 4
 num_workers: 4
-seed: 42
 temporal_subsample:
   mode: none                     # none | uniform | random | last_only
   num_dates: -1                  # >= 2 for uniform/random; ignored for none/last_only
