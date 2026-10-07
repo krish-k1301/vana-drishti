@@ -61,8 +61,8 @@ python gee/run_export.py --config configs/gee/congo_pilot.yaml --pilot    # Phas
 | `02_phase2_benchmark.ipynb` | Phase 2 models, evaluation, U-TAE temporal-depth ablation, benchmark table and plot |
 
 Open one with **File → Open notebook → GitHub**, repo `krish-k1301/vana-drishti`, branch
-`claude/new-session-uto7x0`, then **Runtime → Change runtime type → T4 GPU**. Each session re-downloads the
-dataset (Colab keeps nothing but Drive); checkpoints, logs and results go to `MyDrive/vanadrishti/`, and an
+`claude/new-session-uto7x0`, then **Runtime → Change runtime type → T4 GPU**. The first session downloads the
+dataset and caches the zip on Drive; later sessions copy it back and unzip to local disk. Checkpoints, logs and results go to `MyDrive/vanadrishti/`, and an
 interrupted run resumes from its last epoch when you rerun the same cell.
 
 ## Train and evaluate
