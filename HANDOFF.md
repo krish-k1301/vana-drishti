@@ -3,6 +3,10 @@
 > **Status: the autonomous build finished (all phases PARTIAL: code done and SMOKE-tested; real runs blocked by
 > data/GPU/credentials). Read `REPORT.md` first: section 5 is the owner's to-do list. The sections below are kept
 > for resuming work with Claude Code locally; section 4 items 1–5 are done.**
+>
+> **Update:** training is planned on Google Colab. Use `notebooks/colab/` (README "Running on Google Colab").
+> Runs resume from `checkpoints/last.ckpt` (`train.resume: true`); keep `data.root`/`data.stats_path`
+> identical across sessions or the resume is refused.
 
 Give this file to Claude Code as the first message in a fresh session at the repo root, together with
 `PRD.md`. It describes exactly where the cloud build stopped and what is left.

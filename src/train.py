@@ -2,7 +2,8 @@
 
 Trains with early stopping on `validation/pixel_iou`, tests the best checkpoint and writes
 `metrics_test.json`, `metrics_test.csv`, `config_resolved.yaml`, `run.log` and `csv/` into
-`<output.runs_dir>/<experiment_name>`.
+`<output.runs_dir>/<experiment_name>`. With `train.resume: true` an interrupted run continues from
+`checkpoints/last.ckpt` in that directory (see `src.training.resume`).
 """
 import argparse
 import logging
@@ -18,8 +19,8 @@ from src.models.inspection import count_parameters, describe_utae_shapes
 from src.training.meters import score_rows
 from src.training.module import ChangeDetectionModule, load_model_weights
 from src.training.validation_prefix import validation_loader
-from src.training.run import (SMOKE_LABEL, best_checkpoint, build_trainer, monitored_callbacks, run_dir_for,
-                              run_logger, seed_and_precision, write_metrics)
+from src.training.run import (best_checkpoint, build_trainer, monitored_callbacks, seed_and_precision, start_run,
+                              write_metrics)
 
 UTAE_NAMES = ("utae", "utae_seq2seq")
 
@@ -52,10 +53,8 @@ def log_model_summary(logger: logging.Logger, cfg: dict, model: torch.nn.Module,
 
 def run(cfg: dict) -> dict:
     """Fit, test the best checkpoint, write the metrics files and return the test results."""
-    run_dir = run_dir_for(cfg)
-    logger = run_logger(run_dir, "train")
-    if require(cfg, "smoke"):
-        logger.info("%s run: synthetic or shortened data, results reproduce nothing", SMOKE_LABEL)
+    start = start_run(cfg, "train")
+    run_dir, logger = start.run_dir, start.logger
     seed_and_precision(cfg)
     data_cfg = data_config(cfg)
     loaders = build_dataloaders(data_cfg)
@@ -72,8 +71,9 @@ def run(cfg: dict) -> dict:
     module = ChangeDetectionModule(model, build_loss(require(cfg, "loss")), require(cfg, "optim"))
     monitor = monitored_key(cfg)
     callbacks = monitored_callbacks(require(cfg, "trainer"), run_dir, monitor)
-    trainer = build_trainer(cfg, run_dir, callbacks)
-    trainer.fit(module, train_dataloaders=loaders["train"], val_dataloaders=loaders["validation"])
+    trainer = build_trainer(cfg, start, callbacks)
+    trainer.fit(module, train_dataloaders=loaders["train"], val_dataloaders=loaders["validation"],
+                ckpt_path=start.checkpoint)
     checkpoint = best_checkpoint(callbacks)
     logger.info("testing best checkpoint %s", checkpoint)
     trainer.test(module, dataloaders=loaders["test"], ckpt_path=checkpoint)

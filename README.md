@@ -50,10 +50,30 @@ python gee/run_export.py --config configs/gee/amazon_dated.yaml           # refu
 python gee/run_export.py --config configs/gee/congo_pilot.yaml --pilot    # Phase 6; also borneo_pilot.yaml
 ```
 
+## Running on Google Colab
+
+`notebooks/colab/` holds three thin driver notebooks (all logic stays in `src/` and `scripts/`):
+
+| Notebook | What it does |
+|---|---|
+| `00_phase0_download_inspect.ipynb` | Downloads BraDD-S1TS inside Colab (md5-checked, to local disk) and runs the Phase 0 inspection |
+| `01_phase1_baseline.ipynb` | One Phase 1 run per session choice (`ref_ce`, `ours_ce`, `ref_focal`, `ours_focal`), optional one-epoch timing |
+| `02_phase2_benchmark.ipynb` | Phase 2 models, evaluation, U-TAE temporal-depth ablation, benchmark table and plot |
+
+Open one with **File → Open notebook → GitHub**, repo `krish-k1301/vana-drishti`, branch
+`claude/new-session-uto7x0`, then **Runtime → Change runtime type → T4 GPU**. Each session re-downloads the
+dataset (Colab keeps nothing but Drive); checkpoints, logs and results go to `MyDrive/vanadrishti/`, and an
+interrupted run resumes from its last epoch when you rerun the same cell.
+
 ## Train and evaluate
 
 `<BraDD>` is the unzipped dataset directory (default `data/BraDD-S1TS`). Each run writes to
 `results/runs/<experiment_name>/` (checkpoints, CSV logs, `metrics_test.json`, `config_resolved.yaml`).
+
+**Resuming runs** (Colab disconnects): rerun the same command. With `train.resume: true` both launchers continue
+from `checkpoints/last.ckpt` (optimizer, scheduler, early-stopping, best-checkpoint state) and append to
+`csv/version_0/metrics.csv`. Any config change outside the allow-list in `src/training/resume.py` is refused
+(change `experiment_name` or delete the run dir). Evaluate `best-epoch*.ckpt`, not `last.ckpt`.
 
 **Phase 1, baseline reproduction** (targets: CE 47.3 ± 2, focal 48.6 ± 2 pixel IoU; ours within 1 point of the
 reference):

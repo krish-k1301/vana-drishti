@@ -6,10 +6,16 @@ Builds upstream MultiEarthDataModule, Network('UTAE', 'segment'), LossFunction, 
 ForwardFunction('ChangeDetection') and Experiment exactly like upstream `run_via_parser.py`, but with every
 PRD 4.2 value passed explicitly and a CSV logger only. No upstream logic is reimplemented. The one
 work-around: upstream's stats bootstrap crashes when `<root>/<split>_stats.pt` is missing (PRD 4.4
-issue 1), so that file is precomputed from the train split with our `compute_train_stats`.
+issue 1), so that file is copied from `data.stats_path` (same split column, same format) or else computed from
+the train split with our `compute_train_stats`; an existing `<split>_stats.pt` is never overwritten.
+
+Resume (`train.resume`, see `src.training.resume`): Lightning restores weights, optimizer, scheduler and callback
+state from `last.ckpt`. Upstream `Experiment._best_stopping_score` (logged as `StoppingScore/Best`) is a plain
+attribute that no checkpoint holds; `restore_best_stopping_score` sets it from ModelCheckpoint's best score.
 """
 import argparse
 import logging
+import shutil
 from pathlib import Path
 from types import ModuleType
 
@@ -17,11 +23,11 @@ import torch
 from lightning.pytorch.callbacks import LearningRateMonitor
 
 from src.config import load_config, require
-from src.data.stats import compute_train_stats
+from src.data.stats import STAT_KEYS, as_stats, compute_train_stats
 from src.models.build_model import POSITIONAL_PERIOD_KEY
 from src.models.vendor import import_upstream
-from src.training.run import (SMOKE_LABEL, best_checkpoint, build_trainer, monitored_callbacks, run_dir_for,
-                              run_logger, seed_and_precision, write_metrics)
+from src.training.run import (best_checkpoint, build_trainer, monitored_callbacks, seed_and_precision, start_run,
+                              write_metrics)
 
 UPSTREAM_MONITOR = "StoppingScore/Epoch"  # run_via_parser.py: EarlyStopping / ModelCheckpoint monitor
 UPSTREAM_FIXED = {  # values hard-coded upstream (Network, LTAE2d, Experiment); config must agree
@@ -31,6 +37,7 @@ UPSTREAM_FIXED = {  # values hard-coded upstream (Network, LTAE2d, Experiment); 
     "optim.scheduler.threshold": 1.0e-4, "optim.scheduler.threshold_mode": "rel",
     "optim.scheduler.cooldown": 0, "optim.scheduler.min_lr": 0.0, "model.name": "utae",
     "train.init_checkpoint": None, "train.validation_prefix": "none",
+    "trainer.checkpoint.mode": "max", "trainer.early_stopping.mode": "max",
 }
 UPSTREAM_LOSS_NAMES = {"cross_entropy": "CrossEntropy", "focal": "FocalLoss"}
 
@@ -48,6 +55,14 @@ def ensure_upstream_stats(data_cfg: dict, split: str, logger: logging.Logger) ->
     if path.exists():
         logger.info("using existing upstream stats file %s", path)
         return
+    cached = Path(data_cfg["stats_path"]) if data_cfg["stats_path"] is not None else None
+    if cached is not None and cached.is_file() and data_cfg["split_column"] == f"{split}_set":
+        loaded = torch.load(cached, map_location="cpu", weights_only=False)
+        as_stats(loaded, cached)
+        if set(loaded) == set(STAT_KEYS):
+            shutil.copyfile(cached, path)
+            logger.info("WORK-AROUND PRD 4.4 issue 1: copied our train stats %s to %s", cached, path)
+            return
     torch.save(compute_train_stats(data_cfg["root"], f"{split}_set"), path)
     logger.info("WORK-AROUND PRD 4.4 issue 1: wrote %s from the train split with compute_train_stats", path)
 
@@ -77,21 +92,31 @@ def upstream_objects(cfg: dict, source: ModuleType, run_dir: Path) -> tuple:
     return data_module, experiment
 
 
+def restore_best_stopping_score(experiment: object, state: dict | None, logger: logging.Logger) -> None:
+    """On resume, set upstream's un-checkpointed best `StoppingScore/Epoch` from ModelCheckpoint's best score."""
+    if state is None:
+        return
+    scores = [v["best_model_score"] for k, v in state["callbacks"].items()
+              if k.startswith("ModelCheckpoint") and v.get("best_model_score") is not None]
+    if scores:
+        experiment._best_stopping_score = float(max(scores))
+        logger.info("restored upstream StoppingScore/Best = %.4f from the checkpoint", experiment._best_stopping_score)
+
+
 def run(cfg: dict) -> dict:
     """Fit and test the upstream Experiment; write metrics_test.json/.csv and return the test scores."""
     check_upstream_compatible(cfg)
-    run_dir = run_dir_for(cfg)
-    logger = run_logger(run_dir, "reference")
-    if require(cfg, "smoke"):
-        logger.info("%s run: synthetic or shortened data, results reproduce nothing", SMOKE_LABEL)
+    start = start_run(cfg, "reference")
+    run_dir, logger = start.run_dir, start.logger
     source = import_upstream()
     ensure_upstream_stats(require(cfg, "data"), require(cfg, "reference.split"), logger)
     seed_and_precision(cfg)
     data_module, experiment = upstream_objects(cfg, source, run_dir)
     callbacks = monitored_callbacks(require(cfg, "trainer"), run_dir, UPSTREAM_MONITOR)
     callbacks.append(LearningRateMonitor(logging_interval="step"))
-    trainer = build_trainer(cfg, run_dir, callbacks)
-    trainer.fit(model=experiment, datamodule=data_module)
+    restore_best_stopping_score(experiment, start.state, logger)
+    trainer = build_trainer(cfg, start, callbacks)
+    trainer.fit(model=experiment, datamodule=data_module, ckpt_path=start.checkpoint)
     checkpoint = best_checkpoint(callbacks)
     logger.info("testing best checkpoint %s", checkpoint)
     (scores,) = trainer.test(model=experiment, datamodule=data_module, ckpt_path=checkpoint)

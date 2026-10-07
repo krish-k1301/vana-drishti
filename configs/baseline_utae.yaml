@@ -55,6 +55,7 @@ loss:
 train:
   init_checkpoint: null    # path to a src.train Lightning checkpoint to fine-tune from (Phase 6); null = random init
   validation_prefix: none  # none | fixed_per_sample (early detection: one deterministic prefix cutoff per val sample)
+  resume: true             # continue from <run_dir>/checkpoints/last.ckpt if it exists (Colab disconnects)
 
 optim:
   name: adamw
