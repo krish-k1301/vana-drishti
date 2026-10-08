@@ -1,0 +1,7 @@
+# Presentation walkthrough of one sample (scripts/plot_sample_walkthrough.py).
+interval: 0                 # label interval explained (0 = label[0] -> label[1], the only one in BraDD-S1TS)
+pick_min_changed_px: 100    # --pick positive: first sample with at least this many 0->1 pixels in the interval
+n_frames: 8                 # evenly spaced acquisition dates shown in 01_input_timeseries.png (first and last included)
+db_percentiles: [2, 98]     # per-channel dB colour limits of the input frames, from the sample's own values
+dpi: 150
+font_size: 14
