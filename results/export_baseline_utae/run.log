@@ -1,0 +1,24 @@
+2026-10-08 20:02:59,855 INFO starting fresh at epoch 0 (no checkpoints/last.ckpt in the run dir)
+2026-10-08 20:02:59,960 INFO model utae: 1069158 trainable parameters
+2026-10-08 20:03:00,067 INFO U-TAE stage in_conv          (64, 48, 48)
+2026-10-08 20:03:00,067 INFO U-TAE stage down_1           (64, 24, 24)
+2026-10-08 20:03:00,067 INFO U-TAE stage down_2           (64, 12, 12)
+2026-10-08 20:03:00,067 INFO U-TAE stage down_3           (128, 6, 6)
+2026-10-08 20:03:00,067 INFO U-TAE stage temporal_encoder (128, 6, 6)
+2026-10-08 20:03:00,067 INFO U-TAE stage up_1             (64, 12, 12)
+2026-10-08 20:03:00,067 INFO U-TAE stage up_2             (32, 24, 24)
+2026-10-08 20:03:00,067 INFO U-TAE stage up_3             (32, 48, 48)
+2026-10-08 20:03:00,067 INFO U-TAE stage out_conv         (2, 48, 48)
+2026-10-08 20:05:38,950 INFO starting fresh at epoch 0 (no checkpoints/last.ckpt in the run dir)
+2026-10-08 20:05:39,033 INFO model utae: 1069158 trainable parameters
+2026-10-08 20:05:39,099 INFO U-TAE stage in_conv          (64, 48, 48)
+2026-10-08 20:05:39,099 INFO U-TAE stage down_1           (64, 24, 24)
+2026-10-08 20:05:39,099 INFO U-TAE stage down_2           (64, 12, 12)
+2026-10-08 20:05:39,099 INFO U-TAE stage down_3           (128, 6, 6)
+2026-10-08 20:05:39,100 INFO U-TAE stage temporal_encoder (128, 6, 6)
+2026-10-08 20:05:39,100 INFO U-TAE stage up_1             (64, 12, 12)
+2026-10-08 20:05:39,100 INFO U-TAE stage up_2             (32, 24, 24)
+2026-10-08 20:05:39,100 INFO U-TAE stage up_3             (32, 48, 48)
+2026-10-08 20:05:39,100 INFO U-TAE stage out_conv         (2, 48, 48)
+2026-10-09 00:00:02,882 INFO testing best checkpoint /teamspace/studios/this_studio/vana-drishti/results/runs/baseline_utae_lightning/checkpoints/best-epoch64.ckpt
+2026-10-09 00:00:26,166 INFO test pixel IoU (with OR) 0.4550 -> results/runs/baseline_utae_lightning/metrics_test.json

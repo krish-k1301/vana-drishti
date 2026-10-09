@@ -1,0 +1,63 @@
+{
+  "label": "",
+  "smoke": false,
+  "experiment_name": "baseline_utae_lightning",
+  "source": "src.train",
+  "checkpoint": "/teamspace/studios/this_studio/vana-drishti/results/runs/baseline_utae_lightning/checkpoints/best-epoch64.ckpt",
+  "epochs_trained": 95,
+  "monitor": "validation/pixel_iou",
+  "pixel": {
+    "with_or": {
+      "tp": 1146034,
+      "fp": 553103,
+      "fn": 819505,
+      "tn": 9579662,
+      "iou": 0.4550206023720501,
+      "precision": 0.6744800448694399,
+      "recall": 0.5830634752093024,
+      "f1": 0.6254490165020725
+    },
+    "without_or": {
+      "tp": 1146034,
+      "fp": 469072,
+      "fn": 819505,
+      "tn": 9663693,
+      "iou": 0.47072571347107584,
+      "precision": 0.7095720033231815,
+      "recall": 0.5830634752093024,
+      "f1": 0.6401271279332968
+    }
+  },
+  "patch": {
+    "with_or": {
+      "tp": 2055,
+      "fp": 806,
+      "fn": 201,
+      "tn": 2189,
+      "iou": 0.6711299801857838,
+      "precision": 0.7182803213148269,
+      "recall": 0.9109042549153794,
+      "f1": 0.8032050026174693
+    },
+    "without_or": {
+      "tp": 2050,
+      "fp": 702,
+      "fn": 206,
+      "tn": 2293,
+      "iou": 0.6930358347893726,
+      "precision": 0.7449127904269939,
+      "recall": 0.9086879428596242,
+      "f1": 0.8186900955196925
+    }
+  },
+  "or_rule": {
+    "iou_delta": -0.015705111099025726,
+    "f1_delta": -0.014678111431224328,
+    "n_pixels": 12098304,
+    "n_prior_positive": 106625,
+    "n_forced_fp": 84031,
+    "n_forced_tp": 0
+  },
+  "loss": 0.27554348618698626,
+  "skipped_intervals": 0
+}

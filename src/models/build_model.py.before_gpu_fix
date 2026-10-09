@@ -45,11 +45,7 @@ def set_positional_period(model: nn.Module, period: float) -> None:
         parent_name, _, attr = name.rpartition(".")
         parent = model.get_submodule(parent_name)
         old = getattr(parent, attr)
-        encoder = _PositionalEncoder(old.d, T=period, repeat=old.repeat)
-        denom = encoder.denom
-        del encoder.denom
-        encoder.register_buffer("denom", denom, persistent=False)
-        setattr(parent, attr, encoder)
+        setattr(parent, attr, _PositionalEncoder(old.d, T=period, repeat=old.repeat))
 
 
 def _build_utae(params: dict, seq2seq: bool) -> nn.Module:

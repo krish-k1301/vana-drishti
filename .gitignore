@@ -7,4 +7,4 @@ results/runs/
 *.part
 lightning_logs/
 .orchestrator/
-.venv/
+.venv-train/
